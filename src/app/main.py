@@ -6,12 +6,19 @@ from dataclasses import asdict
 from src.app.bootstrap import bootstrap_application
 from src.config.settings import AppSettings
 from src.utils.logging import configure_logging
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 def main() -> None:
     settings = AppSettings.from_env()
     configure_logging(settings.log_level)
-    artifacts = bootstrap_application(settings)
+    try:
+        artifacts = bootstrap_application(settings)
+    except Exception:
+        logger.exception("CLI bootstrap failed")
+        raise
 
     summary = {
         "project_root": str(artifacts.settings.project_root),

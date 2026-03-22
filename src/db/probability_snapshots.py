@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import sqlite3
+
+from src.db.sqlite import connect_sqlite
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -33,7 +35,7 @@ class ProbabilitySnapshotRepository:
         self.database_path = database_path
 
     def save(self, snapshot: ProbabilitySnapshotInsert) -> int:
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             cursor = connection.execute(
                 """
                 INSERT INTO probability_snapshots (
@@ -82,7 +84,7 @@ class ProbabilitySnapshotRepository:
             return int(cursor.lastrowid)
 
     def history_for_settlement(self, settlement_id: int, limit: int = 20) -> list[dict[str, Any]]:
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             connection.row_factory = sqlite3.Row
             rows = connection.execute(
                 """
@@ -97,7 +99,7 @@ class ProbabilitySnapshotRepository:
         return [dict(row) for row in rows]
 
     def latest_for_settlement_and_cluster(self, settlement_id: int, cluster_id: int) -> dict[str, Any] | None:
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             connection.row_factory = sqlite3.Row
             row = connection.execute(
                 """

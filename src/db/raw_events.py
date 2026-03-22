@@ -2,6 +2,8 @@ from __future__ import annotations
 
 import json
 import sqlite3
+
+from src.db.sqlite import connect_sqlite
 from dataclasses import dataclass
 from datetime import datetime
 from pathlib import Path
@@ -38,7 +40,7 @@ class RawEventRepository:
 
     def save(self, event: RawEventInsert) -> RawEventRecord:
         source_payload = json.dumps(event.source_payload, ensure_ascii=False, separators=(",", ":"))
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             duplicate_row = connection.execute(
                 "SELECT id FROM raw_events WHERE payload_hash = ? ORDER BY id ASC LIMIT 1",
                 (event.payload_hash,),
@@ -91,7 +93,7 @@ class RawEventRepository:
         )
 
     def get_payload(self, raw_event_id: int) -> dict[str, Any]:
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             row = connection.execute(
                 "SELECT source_payload FROM raw_events WHERE id = ?",
                 (raw_event_id,),
@@ -101,7 +103,7 @@ class RawEventRepository:
         return json.loads(row[0])
 
     def get_fetched_at(self, raw_event_id: int) -> str | None:
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             row = connection.execute(
                 "SELECT fetched_at FROM raw_events WHERE id = ?",
                 (raw_event_id,),
@@ -109,7 +111,7 @@ class RawEventRepository:
         return row[0] if row else None
 
     def update_parse_status(self, raw_event_id: int, parse_status: str, error_message: str | None = None) -> None:
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             connection.execute(
                 """
                 UPDATE raw_events

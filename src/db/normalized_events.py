@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import sqlite3
+
+from src.db.sqlite import connect_sqlite
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -33,7 +35,7 @@ class NormalizedEventRepository:
         self.database_path = database_path
 
     def save_event(self, event: NormalizedEventInsert) -> int:
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             cursor = connection.execute(
                 """
                 INSERT INTO normalized_events (
@@ -62,7 +64,7 @@ class NormalizedEventRepository:
     def save_locations(self, locations: list[EventLocationInsert]) -> None:
         if not locations:
             return
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             connection.executemany(
                 """
                 INSERT INTO event_locations (

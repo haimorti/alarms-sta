@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import sqlite3
+
+from src.db.sqlite import connect_sqlite
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -30,7 +32,7 @@ class EventClusterRepository:
         self.database_path = database_path
 
     def create_cluster(self, cluster: EventClusterInsert) -> int:
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             cursor = connection.execute(
                 """
                 INSERT INTO event_clusters (
@@ -59,7 +61,7 @@ class EventClusterRepository:
     def add_members(self, members: list[ClusterMemberInsert]) -> None:
         if not members:
             return
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             connection.executemany(
                 """
                 INSERT INTO cluster_members (

@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import sqlite3
+
+from src.db.sqlite import connect_sqlite
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -28,7 +30,7 @@ class RiskWindowRepository:
         self.database_path = database_path
 
     def save(self, risk_window: RiskWindowInsert) -> int:
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             cursor = connection.execute(
                 """
                 INSERT INTO risk_windows (
@@ -67,7 +69,7 @@ class RiskWindowRepository:
             return int(cursor.lastrowid)
 
     def latest_for_cluster(self, cluster_id: int) -> dict[str, Any] | None:
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             connection.row_factory = sqlite3.Row
             row = connection.execute(
                 """

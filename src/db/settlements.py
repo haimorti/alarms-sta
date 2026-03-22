@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import sqlite3
+
+from src.db.sqlite import connect_sqlite
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -35,7 +37,7 @@ class SettlementRepository:
         self.database_path = database_path
 
     def upsert_settlement(self, settlement: SettlementSeed) -> int:
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             row = connection.execute("SELECT id FROM settlements WHERE name_he = ?", (settlement.name_he,)).fetchone()
             values = self._settlement_values(settlement)
             if row:
@@ -74,7 +76,7 @@ class SettlementRepository:
             return int(cursor.lastrowid)
 
     def upsert_alias(self, alias: SettlementAliasSeed) -> None:
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             connection.execute(
                 """
                 INSERT INTO settlement_aliases (settlement_id, alias, alias_normalized, alias_compact, alias_type, confidence, notes)
@@ -94,7 +96,7 @@ class SettlementRepository:
     def find_by_name_or_alias(self, raw_name: str) -> tuple[int | None, str | None, float, str | None, float | None, float | None]:
         normalized = normalize_location_name(raw_name)
         compact = compact_location_name(raw_name)
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             row = connection.execute(
                 """
                 SELECT settlement_id, canonical_name, confidence, method, lat, lon
@@ -125,7 +127,7 @@ class SettlementRepository:
         return row
 
     def bulk_upsert_settlements(self, settlements: list[SettlementSeed]) -> dict[str, int]:
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             existing_rows = connection.execute("SELECT id, name_he FROM settlements").fetchall()
             existing_by_name = {name_he: settlement_id for settlement_id, name_he in existing_rows}
             for settlement in settlements:
@@ -166,7 +168,7 @@ class SettlementRepository:
         return {name_he: settlement_id for settlement_id, name_he in rows}
 
     def bulk_upsert_aliases(self, aliases: list[SettlementAliasSeed]) -> None:
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             connection.executemany(
                 """
                 INSERT INTO settlement_aliases (settlement_id, alias, alias_normalized, alias_compact, alias_type, confidence, notes)
@@ -184,7 +186,7 @@ class SettlementRepository:
             connection.commit()
 
     def geometry_coverage(self, settlement_id: int) -> tuple[bool, bool]:
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             row = connection.execute(
                 "SELECT polygon, geometry, source_dataset FROM settlements WHERE id = ?",
                 (settlement_id,),

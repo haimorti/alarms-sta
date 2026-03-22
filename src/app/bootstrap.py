@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field, replace
 from pathlib import Path
 
 from src.clustering.matcher import EventMatcher, MatchingPolicy, build_matching_policy
@@ -21,6 +21,7 @@ from src.ingestion.service import IngestionService
 from src.ingestion.poller import PollerStatus, build_poller_status
 from src.normalization.service import NormalizationService
 from src.scoring.model import ScoringThresholds, build_scoring_thresholds
+from src.db.sqlite import SHARED_MEMORY_DB_URI
 
 logger = logging.getLogger(__name__)
 REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
@@ -40,11 +41,19 @@ class BootstrapArtifacts:
     probability_engine: ProbabilityEngineV1
     api_service: ApiService
     risk_window_service: RiskWindowService
+    warnings: list[str] = field(default_factory=list)
 
 
 def bootstrap_application(settings: AppSettings) -> BootstrapArtifacts:
-    settings.ensure_directories()
-    initialize_database(settings.database_path)
+    warnings: list[str] = []
+    try:
+        initialize_database(settings.database_path)
+    except Exception as exc:
+        warning = f"Database initialization failed for {settings.database_path}: {exc}. Falling back to shared in-memory SQLite."
+        logger.exception(warning)
+        warnings.append(warning)
+        settings = replace(settings, database_path=SHARED_MEMORY_DB_URI)
+        initialize_database(settings.database_path)
     raw_event_repository = RawEventRepository(settings.database_path)
     normalized_event_repository = NormalizedEventRepository(settings.database_path)
     settlement_repository = SettlementRepository(settings.database_path)
@@ -68,8 +77,20 @@ def bootstrap_application(settings: AppSettings) -> BootstrapArtifacts:
         project_root=REPOSITORY_ROOT,
         repository=settlement_repository,
     )
-    seed_import_result = settlement_registry.import_seed_data()
-    ingestion_service = IngestionService(settings)
+    try:
+        seed_import_result = settlement_registry.import_seed_data()
+    except Exception as exc:
+        warning = f"Settlement seed import failed during bootstrap: {exc}"
+        logger.exception(warning)
+        warnings.append(warning)
+        seed_import_result = SeedImportResult(settlements_imported=0, aliases_imported=0)
+    try:
+        ingestion_service = IngestionService(settings)
+    except Exception as exc:
+        warning = f"Ingestion service bootstrap failed: {exc}"
+        logger.exception(warning)
+        warnings.append(warning)
+        ingestion_service = IngestionService(replace(settings, polling=replace(settings.polling, archive_raw_payloads=False)))
     normalization_service = NormalizationService(
         raw_event_repository=raw_event_repository,
         normalized_event_repository=normalized_event_repository,
@@ -92,6 +113,7 @@ def bootstrap_application(settings: AppSettings) -> BootstrapArtifacts:
     logger.info("Application bootstrap completed. Database initialized at %s", settings.database_path)
     return BootstrapArtifacts(
         settings=settings,
+        warnings=warnings,
         poller_status=poller_status,
         matching_policy=matching_policy,
         scoring_thresholds=scoring_thresholds,
