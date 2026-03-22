@@ -1,14 +1,55 @@
-# Alarms in Israel
+# Alarms STA
 
-### Rockets alarms in Israel during the war from 7-Oct-23
-A [map](https://yuval-harpaz.github.io/alarms/alarms_7_days.html) showing alarms per day  for previous week<br>
-![image](docs/thumb1.png?raw=true)
-### Rockets alarms in Israel
-A [map](https://yuval-harpaz.github.io/alarms/alarms_by_year.html) showing alarms by year since 2019<br>
-![image](https://user-images.githubusercontent.com/445416/221681172-71884293-b03c-4412-88fa-9bda2c895329.png)
-### Deaths by residence
-A [map](https://yuval-harpaz.github.io/alarms/war_deaths23.html) showing war deaths since 7-Oct-23, by residence <br>
-![image](docs/thumb2.png?raw=true)
-### Earthquakes measured in Israel
-[alarms](https://github.com/yuval-harpaz/alarms): Earthquakes data from the Geolocical Survey of Israel is displayed on a [map](https://yuval-harpaz.github.io/alarms/earthquakes_by_time.html), by time of occurrence.<br>
-![covid19 by vaccunation status](https://github.com/yuval-harpaz/alarms/raw/master/docs/thumb.png?raw=true)
+## Project goal
+This repository is being extended into a new, modular system for estimating the probability that a specific settlement will receive an actual alarm after appearing in an early-warning area. The system is intentionally conservative: it separates what is observed from what is inferred, preserves raw data, and explains every meaningful decision.
+
+## Current status
+Stage 1 is now focused on infrastructure:
+- modular project skeleton under `src/`,
+- config-driven bootstrap,
+- initial SQLite schema,
+- documentation for architecture and MVP scope,
+- tests for configuration and bootstrap,
+- initial ingestion and normalization scaffolding with fixtures,
+- baseline probability engine, internal API service, and minimal HTML views.
+
+A key product rule is now encoded directly into the foundation: the future scoring layer must expose **three separate outputs** instead of one opaque score:
+- spatial probability,
+- historical probability,
+- weighted total probability,
+with explanations and confidence kept separate from the scores themselves.
+
+## Repository context
+The repository already contains historical alarm and geography data under `data/`. These legacy datasets are not treated as the operational database, but they are important inputs for:
+- historical analysis,
+- settlement seed loading,
+- alias normalization,
+- deterministic fixtures,
+- later scoring calibration.
+
+See:
+- `docs/architecture-plan.md`
+- `docs/data-inventory.md`
+- `docs/data-model.md`
+- `docs/event-classification.md`
+- `docs/matching-logic.md`
+- `docs/scoring-model.md`
+- `docs/mvp-scope.md`
+
+## Run Stage 1 bootstrap
+```bash
+PYTHONPATH=. python -m src.app.main
+```
+
+The bootstrap will:
+1. create `data/raw/` and `data/normalized/` if they do not exist,
+2. initialize the SQLite database at `data/alarms_sta.db`,
+3. print the active configuration summary.
+
+## Run tests
+```bash
+PYTHONPATH=. python -m unittest discover -s tests
+```
+
+## Legacy materials
+The historical maps, one-off scripts, and older analyses remain in the repository for reference and research, but the new system is being built as a clean architecture alongside them.
