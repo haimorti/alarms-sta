@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 
 from src.db.settlements import SettlementAliasSeed, SettlementRepository, SettlementSeed
+from src.geo.name_normalizer import alias_variants
 from src.geo.municipalities import MunicipalityDatasetSummary, MunicipalityGeoJSONImporter
 
 
@@ -24,6 +25,8 @@ class SettlementResolution:
     resolution_method: str
     lat: float | None
     lon: float | None
+    has_direct_polygon: bool
+    fallback_geometry_used: bool
 
 
 @dataclass(slots=True)
@@ -115,15 +118,17 @@ class SettlementRegistryService:
 
         alias_seeds: list[SettlementAliasSeed] = []
         for settlement_seed in settlement_seeds:
-            alias_seeds.append(
-                SettlementAliasSeed(
-                    settlement_id=settlement_ids.get(settlement_seed.name_he),
-                    alias=settlement_seed.name_he,
-                    alias_type='canonical_name',
-                    confidence=1.0,
-                    notes='Imported from canonical settlement registry',
+            settlement_id = settlement_ids.get(settlement_seed.name_he)
+            for variant in alias_variants(settlement_seed.name_he):
+                alias_seeds.append(
+                    SettlementAliasSeed(
+                        settlement_id=settlement_id,
+                        alias=variant,
+                        alias_type='canonical_name' if variant == settlement_seed.name_he else 'generated_alias',
+                        confidence=1.0 if variant == settlement_seed.name_he else 0.97,
+                        notes='Imported from canonical settlement registry',
+                    )
                 )
-            )
 
         for raw_alias, canonical_name in alias_map.items():
             canonical_name = canonical_name.strip()
@@ -134,15 +139,16 @@ class SettlementRegistryService:
                 settlement_id = settlement_ids.get(canonical_name)
                 confidence = 0.9 if settlement_id else 0.5
                 alias_type = 'manual_alias'
-            alias_seeds.append(
-                SettlementAliasSeed(
-                    settlement_id=settlement_id,
-                    alias=raw_alias,
-                    alias_type=alias_type,
-                    confidence=confidence,
-                    notes='Imported from missing_cities.json',
+            for variant in alias_variants(raw_alias):
+                alias_seeds.append(
+                    SettlementAliasSeed(
+                        settlement_id=settlement_id,
+                        alias=variant,
+                        alias_type=alias_type if variant == raw_alias else f'{alias_type}_normalized',
+                        confidence=confidence if variant == raw_alias else max(confidence - 0.05, 0.3),
+                        notes='Imported from missing_cities.json',
+                    )
                 )
-            )
         self.repository.bulk_upsert_aliases(alias_seeds)
         aliases_imported = len(alias_seeds)
 
@@ -168,7 +174,10 @@ class SettlementRegistryService:
                 resolution_method='unresolved',
                 lat=None,
                 lon=None,
+                has_direct_polygon=False,
+                fallback_geometry_used=False,
             )
+        has_direct_polygon, fallback_geometry_used = self.repository.geometry_coverage(int(settlement_id))
         return SettlementResolution(
             raw_name=raw_name,
             settlement_id=int(settlement_id),
@@ -177,6 +186,8 @@ class SettlementRegistryService:
             resolution_method=method or 'alias',
             lat=lat,
             lon=lon,
+            has_direct_polygon=has_direct_polygon,
+            fallback_geometry_used=fallback_geometry_used,
         )
 
     def build_unresolved_report(self, raw_names: list[str]) -> list[UnresolvedLocation]:

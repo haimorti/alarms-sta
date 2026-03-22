@@ -17,7 +17,7 @@ class AppSettingsTest(unittest.TestCase):
             self.assertEqual(settings.raw_data_dir, Path(tmp_dir).resolve() / "data" / "raw")
             self.assertEqual(settings.normalized_data_dir, Path(tmp_dir).resolve() / "data" / "normalized")
             self.assertEqual(settings.database_path, Path(tmp_dir).resolve() / "data" / "alarms_sta.db")
-            self.assertEqual(settings.polling.interval_seconds, 2.0)
+            self.assertEqual(settings.polling.interval_seconds, 3.0)
             self.assertTrue(settings.polling.archive_raw_payloads)
             self.assertEqual(settings.matching.max_candidate_window_seconds, 180)
             self.assertFalse(settings.debug_mode)

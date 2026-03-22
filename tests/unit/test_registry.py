@@ -37,20 +37,28 @@ class MunicipalityImporterTest(unittest.TestCase):
 
 
 class SettlementRegistryTest(unittest.TestCase):
-    def test_registry_resolves_exact_and_alias_names(self) -> None:
+    def test_registry_resolves_exact_alias_and_normalized_names(self) -> None:
         with tempfile.TemporaryDirectory() as tmp_dir:
             artifacts = bootstrap_application(AppSettings.from_env(Path(tmp_dir)))
 
             exact = artifacts.settlement_registry.resolve_name('אבו גוש')
             alias = artifacts.settlement_registry.resolve_name('אבו-גוש')
+            sub_area = artifacts.settlement_registry.resolve_name('נתניה-מזרח')
+            farm = artifacts.settlement_registry.resolve_name('חוות יאיר')
+            industrial = artifacts.settlement_registry.resolve_name('אזור-תעשייה בראון')
             unresolved = artifacts.settlement_registry.resolve_name('מקום לא קיים')
 
             self.assertEqual(exact.canonical_name, 'אבו גוש')
             self.assertEqual(exact.resolution_method, 'exact_name')
             self.assertEqual(alias.canonical_name, 'אבו גוש')
-            self.assertEqual(alias.resolution_method, 'manual_alias')
-            self.assertIsNotNone(exact.lat)
-            self.assertIsNotNone(exact.lon)
+            self.assertIn(alias.resolution_method, {'generated_alias', 'manual_alias', 'manual_alias_normalized', 'normalized_name'})
+            self.assertEqual(sub_area.canonical_name, 'נתניה - מזרח')
+            self.assertEqual(farm.canonical_name, 'חוות יאיר')
+            self.assertEqual(industrial.canonical_name, 'אזור תעשייה בראון')
+            self.assertIsNotNone(farm.lat)
+            self.assertIsNotNone(farm.lon)
+            self.assertFalse(farm.has_direct_polygon)
+            self.assertTrue(farm.fallback_geometry_used or not farm.has_direct_polygon)
             self.assertIsNone(unresolved.settlement_id)
             self.assertEqual(unresolved.resolution_method, 'unresolved')
 

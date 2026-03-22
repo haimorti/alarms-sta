@@ -6,7 +6,7 @@ from src.normalization.parser import ParsedAlertRecord
 from src.types.domain import NormalizedEventType
 
 
-EARLY_WARNING_KEYWORDS = ("מוקדמת", "early warning", "preliminary")
+EARLY_WARNING_KEYWORDS = ("מוקדמת", "צפויות להתקבל התרעות", "early warning", "preliminary")
 ACTUAL_ALARM_KEYWORDS = (
     "ירי רקטות",
     "צבע אדום",

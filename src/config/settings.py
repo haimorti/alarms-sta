@@ -7,7 +7,7 @@ import os
 
 @dataclass(slots=True)
 class PollingConfig:
-    interval_seconds: float = 2.0
+    interval_seconds: float = 3.0
     request_timeout_seconds: float = 5.0
     max_retries: int = 3
     archive_raw_payloads: bool = True
@@ -70,7 +70,7 @@ class AppSettings:
             debug_mode=debug_mode,
             alerts_url=alerts_url,
             polling=PollingConfig(
-                interval_seconds=float(os.environ.get("ALARMS_STA_POLL_INTERVAL", "2")),
+                interval_seconds=float(os.environ.get("ALARMS_STA_POLL_INTERVAL", "3")),
                 request_timeout_seconds=float(os.environ.get("ALARMS_STA_REQUEST_TIMEOUT", "5")),
                 max_retries=int(os.environ.get("ALARMS_STA_MAX_RETRIES", "3")),
                 archive_raw_payloads=os.environ.get("ALARMS_STA_ARCHIVE_RAW", "1") in {"1", "true", "TRUE", "yes", "YES"},
