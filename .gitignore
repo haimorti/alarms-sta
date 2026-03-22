@@ -22,3 +22,7 @@ downloads
 .venv
 docs/align_map.html
 alerts.log
+
+data/alarms_sta.db
+data/raw/
+data/normalized/
