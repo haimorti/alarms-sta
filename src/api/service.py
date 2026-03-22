@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import sqlite3
+from datetime import datetime, timezone
 
 from src.db.sqlite import connect_sqlite
 from pathlib import Path
@@ -101,6 +102,7 @@ class ApiService:
         settlement = self._resolve_settlement(settlement_query)
         if not settlement:
             return None
+        refresh_meta = self._refresh_metadata()
         status = self._current_alert_status(settlement["id"])
         latest_alarm = self._latest_actual_alarm_for_settlement(settlement["id"])
         latest_event = self._latest_early_warning_for_settlement(settlement["id"])
@@ -110,6 +112,7 @@ class ApiService:
                 "message": "No active or historical early-warning event currently contains this settlement",
                 "status": status,
                 "latest_alarm": latest_alarm,
+                **refresh_meta,
             }
 
         cluster_id = latest_event["id"]
@@ -123,6 +126,7 @@ class ApiService:
                 "risk_window": latest_risk_window,
                 "status": status,
                 "latest_alarm": latest_alarm,
+                **refresh_meta,
             }
 
         context = SettlementEventContext(
@@ -146,6 +150,14 @@ class ApiService:
             "risk_window": latest_risk_window,
             "status": status,
             "latest_alarm": latest_alarm,
+            **refresh_meta,
+        }
+
+
+    def _refresh_metadata(self) -> dict[str, str | None]:
+        return {
+            "refreshed_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
+            "last_fetch_at": self.health().get("last_fetch_at"),
         }
 
     def probability_history(self, settlement_query: str, limit: int = 20) -> dict[str, Any] | None:
