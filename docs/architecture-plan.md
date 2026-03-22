@@ -6,7 +6,7 @@ Stage 1 establishes a clean, modular foundation for a new probability-assessment
 ## Layer separation
 - **Data ingestion**: polling, retries, raw payload persistence, transport telemetry.
 - **Normalization**: payload parsing, event-type classification, settlement-name extraction, confidence recording.
-- **Geospatial**: settlement registry, aliases, coordinates, neighborhood and geometry support.
+- **Geospatial**: settlement registry, aliases, canonical centroids, municipal polygons, neighborhood support, and provenance-aware geometry import.
 - **Clustering**: matching early warnings, actual alarms, and clearing messages into event clusters.
 - **Scoring**: separate spatial scoring, historical scoring, weighted scoring, component-level explanations, and confidence tracking.
 - **Persistence**: SQLite-first schema for local development, designed so it can later migrate to PostgreSQL if needed.
@@ -24,7 +24,7 @@ Stage 1 establishes a clean, modular foundation for a new probability-assessment
 ## Stage 2 to Stage 8 baseline scaffolding now in place
 - **Ingestion scaffolding**: HTTP fetcher, raw payload archiver, duplicate-preserving raw event repository, and ingestion service orchestration.
 - **Normalization scaffolding**: payload parser, keyword-based cautious classifier, persistence into `normalized_events` and `event_locations`, and parse-status updates on raw events.
-- **Settlement registry baseline**: seed import from `coord.csv`, `location_dictionary.csv`, `coord_area.csv`, and `missing_cities.json`, plus canonical-name/alias resolution and unresolved reporting.
+- **Settlement registry baseline**: primary geometry import from `data/israel-municipalities-polygons-master/` plus fallback enrichment from `coord.csv`, `location_dictionary.csv`, `coord_area.csv`, and `missing_cities.json`, with canonical-name/alias resolution, derived centroids, retained polygons, and unresolved reporting.
 - **Clustering baseline**: deterministic early-warning to actual-alarm matcher using time proximity, overlap ratio, subset ratio, and event-type compatibility.
 - **Probability baseline**: v1 probability engine with separate spatial, historical, and weighted outputs, each with explanations and confidence labels.
 - **Dynamic risk-window model**: support for sequential uncertainty windows so the system can represent an initial wide launch-detection area that later narrows and shifts as trajectory confidence improves.
@@ -56,3 +56,7 @@ The repository already includes historical alarms, coordinates, naming dictionar
 - alias normalization,
 - deterministic test fixtures,
 - later calibration work.
+
+
+## Primary geographic source
+The municipal GeoJSON repository under `data/israel-municipalities-polygons-master/` is now treated as an official architectural input, not an auxiliary dataset. Stage 1+ geospatial ingestion should prefer its polygons, derive centroids from those polygons for current scoring, and preserve the polygon payload for later higher-fidelity spatial probability calculations. Missing alert entities that do not exist in that municipal source must still be supportable through manual alias and fallback registry entries.

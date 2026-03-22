@@ -24,10 +24,15 @@ Key fields:
 - `notes`: machine-readable or human-readable classification notes.
 
 ## `event_locations`
-Stores extracted raw location labels and their normalized settlement resolution.
+Stores extracted raw location labels and their normalized settlement resolution. The resolved coordinates currently use the canonical settlement centroid so later scoring can measure distance-to-center, edge exposure, and other spatial heuristics.
 
 ## `settlements`
 Canonical settlement / alert-entity registry.
+
+Key fields:
+- `centroid_lat` / `centroid_lon`: primary spatial point derived from municipal polygons when available.
+- `polygon`: serialized GeoJSON polygon or multipolygon retained for later precise scoring.
+- `source_dataset` / `source_path`: provenance for the geometry seed, with `data/israel-municipalities-polygons-master/` treated as the primary source.
 
 ## `settlement_aliases`
 Alias mapping layer used to normalize alert labels to canonical entities.
