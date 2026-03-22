@@ -26,6 +26,12 @@ class BootstrapIntegrationTest(unittest.TestCase):
                         "SELECT name FROM sqlite_master WHERE type = 'table'"
                     ).fetchall()
                 }
+                probability_columns = {
+                    row[1]
+                    for row in connection.execute(
+                        "PRAGMA table_info(probability_snapshots)"
+                    ).fetchall()
+                }
 
             expected_tables = {
                 "raw_events",
@@ -38,6 +44,17 @@ class BootstrapIntegrationTest(unittest.TestCase):
                 "probability_snapshots",
             }
             self.assertTrue(expected_tables.issubset(tables))
+            self.assertTrue(
+                {
+                    "spatial_score",
+                    "spatial_explanation",
+                    "historical_score",
+                    "historical_explanation",
+                    "weighted_score",
+                    "weighted_explanation",
+                    "weighting_profile",
+                }.issubset(probability_columns)
+            )
 
 
 if __name__ == "__main__":

@@ -11,6 +11,12 @@ Stage 1 is now focused on infrastructure:
 - documentation for architecture and MVP scope,
 - tests for configuration and bootstrap.
 
+A key product rule is now encoded directly into the foundation: the future scoring layer must expose **three separate outputs** instead of one opaque score:
+- spatial probability,
+- historical probability,
+- weighted total probability,
+with explanations and confidence kept separate from the scores themselves.
+
 ## Repository context
 The repository already contains historical alarm and geography data under `data/`. These legacy datasets are not treated as the operational database, but they are important inputs for:
 - historical analysis,

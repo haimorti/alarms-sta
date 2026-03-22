@@ -48,6 +48,22 @@ class EventLocation:
 
 
 @dataclass(slots=True)
+class ScoreComponent:
+    score_numeric: float
+    score_label: ProbabilityLabel
+    confidence_numeric: float
+    confidence_label: ConfidenceLabel
+    explanation: str
+
+
+@dataclass(slots=True)
+class ProbabilityBreakdown:
+    spatial: ScoreComponent
+    historical: ScoreComponent
+    weighted: ScoreComponent
+
+
+@dataclass(slots=True)
 class NormalizedEvent:
     raw_event_id: int
     normalized_type: NormalizedEventType

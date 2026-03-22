@@ -8,7 +8,7 @@ Stage 1 establishes a clean, modular foundation for a new probability-assessment
 - **Normalization**: payload parsing, event-type classification, settlement-name extraction, confidence recording.
 - **Geospatial**: settlement registry, aliases, coordinates, neighborhood and geometry support.
 - **Clustering**: matching early warnings, actual alarms, and clearing messages into event clusters.
-- **Scoring**: probability scoring, confidence scoring, reason summaries, threshold mapping.
+- **Scoring**: separate spatial scoring, historical scoring, weighted scoring, component-level explanations, and confidence tracking.
 - **Persistence**: SQLite-first schema for local development, designed so it can later migrate to PostgreSQL if needed.
 - **API**: internal read/debug endpoints.
 - **UI**: thin presentation layer only.
@@ -20,6 +20,16 @@ Stage 1 establishes a clean, modular foundation for a new probability-assessment
 4. Minimal application bootstrap that creates directories and initializes the database.
 5. Documentation for data inventory and MVP scope.
 6. Unit and integration tests for configuration and bootstrap.
+
+## Score model contract from day one
+The product must never collapse all reasoning into one opaque output. The Stage 1 data contract therefore reserves separate fields for:
+- **Spatial score**: relative position inside the early-warning area.
+- **Historical score**: transition evidence from similar historical events or similar relative positions.
+- **Weighted score**: configurable blend of spatial and historical components.
+- **Confidence**: at minimum for the weighted output, and preferably per component as data quality improves.
+- **Explanations**: short text for spatial, historical, and weighted outputs independently.
+
+This prevents a future refactor where one monolithic score would need to be split apart after the fact.
 
 ## Out of scope for Stage 1
 - Live polling loop.
