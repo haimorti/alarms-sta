@@ -4,13 +4,15 @@ from dataclasses import dataclass, field
 from pathlib import Path
 import os
 
+from src.db.sqlite import SHARED_MEMORY_DB_URI
+
 
 @dataclass(slots=True)
 class PollingConfig:
     interval_seconds: float = 3.0
     request_timeout_seconds: float = 5.0
     max_retries: int = 3
-    archive_raw_payloads: bool = True
+    archive_raw_payloads: bool = False
     user_agent: str = "alarms-sta/0.1"
 
 
@@ -36,7 +38,7 @@ class AppSettings:
     raw_data_dir: Path
     normalized_data_dir: Path
     docs_dir: Path
-    database_path: Path
+    database_path: str | Path
     log_level: str = "INFO"
     debug_mode: bool = False
     alerts_url: str = "https://www.oref.org.il/WarningMessages/Alert/alerts.json"
@@ -51,7 +53,8 @@ class AppSettings:
         raw_data_dir = Path(os.environ.get("ALARMS_STA_RAW_DIR", data_dir / "raw")).resolve()
         normalized_data_dir = Path(os.environ.get("ALARMS_STA_NORMALIZED_DIR", data_dir / "normalized")).resolve()
         docs_dir = root / "docs"
-        database_path = Path(os.environ.get("ALARMS_STA_DB_PATH", data_dir / "alarms_sta.db")).resolve()
+        database_path_env = os.environ.get("ALARMS_STA_DB_PATH")
+        database_path = Path(database_path_env).resolve() if database_path_env else SHARED_MEMORY_DB_URI
         log_level = os.environ.get("ALARMS_STA_LOG_LEVEL", "INFO").upper()
         debug_mode = os.environ.get("ALARMS_STA_DEBUG", "0") in {"1", "true", "TRUE", "yes", "YES"}
         alerts_url = os.environ.get(
@@ -73,7 +76,7 @@ class AppSettings:
                 interval_seconds=float(os.environ.get("ALARMS_STA_POLL_INTERVAL", "3")),
                 request_timeout_seconds=float(os.environ.get("ALARMS_STA_REQUEST_TIMEOUT", "5")),
                 max_retries=int(os.environ.get("ALARMS_STA_MAX_RETRIES", "3")),
-                archive_raw_payloads=os.environ.get("ALARMS_STA_ARCHIVE_RAW", "1") in {"1", "true", "TRUE", "yes", "YES"},
+                archive_raw_payloads=os.environ.get("ALARMS_STA_ARCHIVE_RAW", "0") in {"1", "true", "TRUE", "yes", "YES"},
                 user_agent=os.environ.get("ALARMS_STA_USER_AGENT", "alarms-sta/0.1"),
             ),
             matching=MatchingConfig(
@@ -88,9 +91,3 @@ class AppSettings:
                 historical_weight=float(os.environ.get("ALARMS_STA_HISTORICAL_WEIGHT", "0.4")),
             ),
         )
-
-    def ensure_directories(self) -> None:
-        self.data_dir.mkdir(parents=True, exist_ok=True)
-        self.raw_data_dir.mkdir(parents=True, exist_ok=True)
-        self.normalized_data_dir.mkdir(parents=True, exist_ok=True)
-        self.docs_dir.mkdir(parents=True, exist_ok=True)

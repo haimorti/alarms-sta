@@ -4,6 +4,7 @@ import sqlite3
 from pathlib import Path
 
 from src.db.schema import SCHEMA_STATEMENTS
+from src.db.sqlite import connect_sqlite, ensure_shared_memory_database
 
 
 SETTLEMENT_COLUMN_MIGRATIONS: tuple[tuple[str, str], ...] = (
@@ -14,9 +15,9 @@ SETTLEMENT_COLUMN_MIGRATIONS: tuple[tuple[str, str], ...] = (
 )
 
 
-def initialize_database(database_path: Path) -> None:
-    database_path.parent.mkdir(parents=True, exist_ok=True)
-    with sqlite3.connect(database_path) as connection:
+def initialize_database(database_path: str | Path) -> None:
+    ensure_shared_memory_database(database_path)
+    with connect_sqlite(database_path) as connection:
         for statement in SCHEMA_STATEMENTS:
             connection.execute(statement)
         _apply_lightweight_migrations(connection)

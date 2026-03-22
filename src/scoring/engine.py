@@ -3,6 +3,8 @@ from __future__ import annotations
 import json
 import math
 import sqlite3
+
+from src.db.sqlite import connect_sqlite
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -129,7 +131,7 @@ class ProbabilityEngineV1:
         )
 
     def _build_historical_component(self, context: SettlementEventContext) -> ScoreComponent:
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             total_early_warnings = connection.execute(
                 """
                 SELECT COUNT(DISTINCT ne.id)

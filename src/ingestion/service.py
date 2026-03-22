@@ -5,7 +5,7 @@ from dataclasses import dataclass
 
 from src.config.settings import AppSettings
 from src.db.raw_events import RawEventInsert, RawEventRecord, RawEventRepository
-from src.ingestion.poller import AlertFetcher, FetchedPayload, RawPayloadArchiver
+from src.ingestion.poller import AlertFetcher, FetchedPayload
 from src.normalization.parser import extract_primary_metadata
 
 logger = logging.getLogger(__name__)
@@ -25,14 +25,13 @@ class IngestionService:
             timeout_seconds=settings.polling.request_timeout_seconds,
             user_agent=settings.polling.user_agent,
         )
-        self.archiver = RawPayloadArchiver(settings.raw_data_dir)
         self.repository = RawEventRepository(settings.database_path)
 
     def collect_once(self) -> IngestionResult:
         fetched_payload = self.fetcher.fetch_once()
         archive_path = None
         if self.settings.polling.archive_raw_payloads:
-            archive_path = self.archiver.archive(fetched_payload)
+            logger.warning("Raw payload archiving requested but disabled in runtime-safe mode; payload will stay in memory only")
 
         metadata = extract_primary_metadata(fetched_payload.payload_json)
         raw_event_record = self.repository.save(

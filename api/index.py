@@ -7,7 +7,12 @@ from src.config.settings import AppSettings
 from src.ui.pages import render_home_page, render_settlement_page
 
 app = Flask(__name__)
-artifacts = bootstrap_application(AppSettings.from_env())
+
+try:
+    artifacts = bootstrap_application(AppSettings.from_env())
+except Exception as exc:
+    app.logger.exception("Application bootstrap failed", exc_info=exc)
+    raise
 
 
 @app.get('/')

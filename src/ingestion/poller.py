@@ -76,17 +76,9 @@ class RawPayloadArchiver:
     def __init__(self, raw_data_dir: Path) -> None:
         self.raw_data_dir = raw_data_dir
 
-    def archive(self, payload: FetchedPayload) -> Path:
-        ts = payload.fetched_at.astimezone(timezone.utc).strftime("%Y%m%dT%H%M%S.%fZ")
-        target_dir = self.raw_data_dir / payload.fetched_at.strftime("%Y") / payload.fetched_at.strftime("%m") / payload.fetched_at.strftime("%d")
-        target_dir.mkdir(parents=True, exist_ok=True)
-        file_path = target_dir / f"{ts}_{payload.payload_hash[:12]}.json"
-        file_path.write_text(
-            json.dumps(payload.payload_json, ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-        logger.info("Archived raw payload to %s", file_path)
-        return file_path
+    def archive(self, payload: FetchedPayload) -> Path | None:
+        logger.warning("Raw payload archiving is disabled in runtime-safe mode; skipping disk write for %s", payload.source_url)
+        return None
 
 
 def build_poller_status(configured_url: str, interval_seconds: float) -> PollerStatus:

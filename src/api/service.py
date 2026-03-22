@@ -1,6 +1,8 @@
 from __future__ import annotations
 
 import sqlite3
+
+from src.db.sqlite import connect_sqlite
 from pathlib import Path
 from typing import Any
 
@@ -16,7 +18,7 @@ class ApiService:
         self.snapshot_repository = ProbabilitySnapshotRepository(database_path)
 
     def health(self) -> dict[str, Any]:
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             raw_count = connection.execute("SELECT COUNT(*) FROM raw_events").fetchone()[0]
             normalized_count = connection.execute("SELECT COUNT(*) FROM normalized_events").fetchone()[0]
             latest_fetch = connection.execute("SELECT MAX(fetched_at) FROM raw_events").fetchone()[0]
@@ -28,7 +30,7 @@ class ApiService:
         }
 
     def events_active(self, limit: int = 20) -> list[dict[str, Any]]:
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             connection.row_factory = sqlite3.Row
             rows = connection.execute(
                 """
@@ -45,7 +47,7 @@ class ApiService:
         return self.events_active(limit=limit)
 
     def event_detail(self, event_id: int) -> dict[str, Any] | None:
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             connection.row_factory = sqlite3.Row
             event = connection.execute("SELECT * FROM normalized_events WHERE id = ?", (event_id,)).fetchone()
             if not event:
@@ -69,7 +71,7 @@ class ApiService:
         needle = f"%{query}%"
         normalized_needle = f"%{normalized}%"
         compact_needle = f"%{compact}%"
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             connection.row_factory = sqlite3.Row
             rows = connection.execute(
                 """
@@ -154,7 +156,7 @@ class ApiService:
         return {"settlement": settlement, "history": history}
 
     def debug_raw_events(self, limit: int = 20) -> list[dict[str, Any]]:
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             connection.row_factory = sqlite3.Row
             rows = connection.execute(
                 "SELECT id, fetched_at, source_url, payload_hash, parse_status, is_duplicate, duplicate_of_raw_event_id FROM raw_events ORDER BY id DESC LIMIT ?",
@@ -163,7 +165,7 @@ class ApiService:
         return [dict(row) for row in rows]
 
     def debug_normalized_events(self, limit: int = 20) -> list[dict[str, Any]]:
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             connection.row_factory = sqlite3.Row
             rows = connection.execute(
                 "SELECT id, raw_event_id, normalized_type, started_at, source_event_id, confidence_in_classification FROM normalized_events ORDER BY id DESC LIMIT ?",
@@ -185,7 +187,7 @@ class ApiService:
         return self._latest_event_for_settlement(settlement_id, 'clear')
 
     def _latest_event_for_settlement(self, settlement_id: int, event_type: str) -> dict[str, Any] | None:
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             connection.row_factory = sqlite3.Row
             row = connection.execute(
                 """
@@ -220,7 +222,7 @@ class ApiService:
         return {"state": "warning", "title": "צפויות להתקבל התרעות", "event": latest}
 
     def _event_locations(self, event_id: int) -> list[dict[str, Any]]:
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             connection.row_factory = sqlite3.Row
             rows = connection.execute(
                 "SELECT location_name_raw, location_name_normalized, settlement_id, lat, lon FROM event_locations WHERE normalized_event_id = ?",
@@ -229,7 +231,7 @@ class ApiService:
         return [dict(row) for row in rows]
 
     def _latest_risk_window(self, cluster_id: int) -> dict[str, Any] | None:
-        with sqlite3.connect(self.database_path) as connection:
+        with connect_sqlite(self.database_path) as connection:
             connection.row_factory = sqlite3.Row
             row = connection.execute(
                 """
