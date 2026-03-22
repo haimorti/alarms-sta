@@ -18,3 +18,6 @@ The current parser/classifier is still preliminary and intended as scaffolding:
 
 ## Important limitation
 This is not yet a production classifier. It is a transparent starting point so that real payloads can be collected, reviewed, and converted into stronger classification rules with confidence tracking.
+
+## Historical reference note
+`data/alarms.csv` is useful as a historical reference because it preserves fields such as `time`, `cities`, `threat`, `id`, `description`, and `origin`, but it is already a simplified historical table. It should therefore inform research and validation, not replace raw-payload preservation or be treated as a complete representation of the live source schema.

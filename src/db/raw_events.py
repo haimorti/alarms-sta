@@ -89,3 +89,33 @@ class RawEventRepository:
             duplicate_of_raw_event_id=duplicate_of_raw_event_id,
             is_duplicate=is_duplicate,
         )
+
+    def get_payload(self, raw_event_id: int) -> dict[str, Any]:
+        with sqlite3.connect(self.database_path) as connection:
+            row = connection.execute(
+                "SELECT source_payload FROM raw_events WHERE id = ?",
+                (raw_event_id,),
+            ).fetchone()
+        if not row:
+            raise KeyError(f"raw_event_id={raw_event_id} not found")
+        return json.loads(row[0])
+
+    def get_fetched_at(self, raw_event_id: int) -> str | None:
+        with sqlite3.connect(self.database_path) as connection:
+            row = connection.execute(
+                "SELECT fetched_at FROM raw_events WHERE id = ?",
+                (raw_event_id,),
+            ).fetchone()
+        return row[0] if row else None
+
+    def update_parse_status(self, raw_event_id: int, parse_status: str, error_message: str | None = None) -> None:
+        with sqlite3.connect(self.database_path) as connection:
+            connection.execute(
+                """
+                UPDATE raw_events
+                SET parse_status = ?, error_message = ?
+                WHERE id = ?
+                """,
+                (parse_status, error_message, raw_event_id),
+            )
+            connection.commit()

@@ -33,7 +33,7 @@ CREATE TABLE IF NOT EXISTS normalized_events (
 
 CREATE TABLE IF NOT EXISTS settlements (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
-    name_he TEXT NOT NULL,
+    name_he TEXT NOT NULL UNIQUE,
     name_en TEXT,
     aliases TEXT,
     lat REAL,

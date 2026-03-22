@@ -1,12 +1,14 @@
 from __future__ import annotations
 
 import json
+import tempfile
 import unittest
 from pathlib import Path
 
+from src.app.bootstrap import bootstrap_application
+from src.config.settings import AppSettings
 from src.normalization.classifier import classify_record
 from src.normalization.parser import parse_alert_payload
-from src.normalization.service import NormalizationService
 from src.types.domain import NormalizedEventType
 
 
@@ -35,15 +37,14 @@ class NormalizationTest(unittest.TestCase):
             ],
         )
 
-    def test_normalization_service_resolves_aliases(self) -> None:
-        service = NormalizationService(Path("data/missing_cities.json"))
-        previews = service.normalize_payload(self.payload)
+    def test_normalization_service_resolves_registry_aliases(self) -> None:
+        with tempfile.TemporaryDirectory() as tmp_dir:
+            artifacts = bootstrap_application(AppSettings.from_env(Path(tmp_dir)))
+            previews = artifacts.normalization_service.normalize_payload(self.payload)
 
         first_locations = previews[0].resolved_locations
         self.assertEqual(first_locations[2].raw_name, "אבו-גוש")
-        self.assertEqual(first_locations[2].normalized_name, "אבו גוש")
-        self.assertTrue(first_locations[2].matched_by_alias)
-
-
+        self.assertEqual(first_locations[2].canonical_name, "אבו גוש")
+        self.assertEqual(first_locations[2].resolution_method, "manual_alias")
 if __name__ == "__main__":
     unittest.main()

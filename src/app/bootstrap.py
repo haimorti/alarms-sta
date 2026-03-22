@@ -2,16 +2,24 @@ from __future__ import annotations
 
 import logging
 from dataclasses import dataclass
+from pathlib import Path
 
-from src.clustering.matcher import MatchingPolicy, build_matching_policy
+from src.clustering.matcher import EventMatcher, MatchingPolicy, build_matching_policy
+from src.clustering.service import ClusteringService
+from src.db.clusters import EventClusterRepository
 from src.config.settings import AppSettings
 from src.db.bootstrap import initialize_database
+from src.db.normalized_events import NormalizedEventRepository
+from src.db.raw_events import RawEventRepository
+from src.db.settlements import SettlementRepository
+from src.geo.registry import SeedImportResult, SettlementRegistryService
 from src.ingestion.service import IngestionService
 from src.ingestion.poller import PollerStatus, build_poller_status
 from src.normalization.service import NormalizationService
 from src.scoring.model import ScoringThresholds, build_scoring_thresholds
 
 logger = logging.getLogger(__name__)
+REPOSITORY_ROOT = Path(__file__).resolve().parents[2]
 
 
 @dataclass(slots=True)
@@ -22,11 +30,18 @@ class BootstrapArtifacts:
     scoring_thresholds: ScoringThresholds
     ingestion_service: IngestionService
     normalization_service: NormalizationService
+    settlement_registry: SettlementRegistryService
+    seed_import_result: SeedImportResult
+    clustering_service: ClusteringService
 
 
 def bootstrap_application(settings: AppSettings) -> BootstrapArtifacts:
     settings.ensure_directories()
     initialize_database(settings.database_path)
+    raw_event_repository = RawEventRepository(settings.database_path)
+    normalized_event_repository = NormalizedEventRepository(settings.database_path)
+    settlement_repository = SettlementRepository(settings.database_path)
+    event_cluster_repository = EventClusterRepository(settings.database_path)
 
     poller_status = build_poller_status(
         configured_url=settings.alerts_url,
@@ -41,9 +56,20 @@ def bootstrap_application(settings: AppSettings) -> BootstrapArtifacts:
         low_threshold=settings.scoring.low_threshold,
         high_threshold=settings.scoring.high_threshold,
     )
+    settlement_registry = SettlementRegistryService(
+        project_root=REPOSITORY_ROOT,
+        repository=settlement_repository,
+    )
+    seed_import_result = settlement_registry.import_seed_data()
     ingestion_service = IngestionService(settings)
     normalization_service = NormalizationService(
-        alias_file=settings.project_root / "data" / "missing_cities.json",
+        raw_event_repository=raw_event_repository,
+        normalized_event_repository=normalized_event_repository,
+        settlement_registry=settlement_registry,
+    )
+    clustering_service = ClusteringService(
+        repository=event_cluster_repository,
+        matcher=EventMatcher(matching_policy),
     )
 
     logger.info("Application bootstrap completed. Database initialized at %s", settings.database_path)
@@ -54,4 +80,7 @@ def bootstrap_application(settings: AppSettings) -> BootstrapArtifacts:
         scoring_thresholds=scoring_thresholds,
         ingestion_service=ingestion_service,
         normalization_service=normalization_service,
+        settlement_registry=settlement_registry,
+        seed_import_result=seed_import_result,
+        clustering_service=clustering_service,
     )

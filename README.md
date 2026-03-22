@@ -31,6 +31,7 @@ See:
 - `docs/data-inventory.md`
 - `docs/data-model.md`
 - `docs/event-classification.md`
+- `docs/matching-logic.md`
 - `docs/mvp-scope.md`
 
 ## Run Stage 1 bootstrap
