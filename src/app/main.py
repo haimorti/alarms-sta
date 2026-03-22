@@ -22,6 +22,10 @@ def main() -> None:
         "archive_raw_payloads": artifacts.settings.polling.archive_raw_payloads,
         "matching_policy": asdict(artifacts.matching_policy),
         "scoring_thresholds": asdict(artifacts.scoring_thresholds),
+        "score_weights": {
+            "spatial_weight": artifacts.settings.scoring.spatial_weight,
+            "historical_weight": artifacts.settings.scoring.historical_weight,
+        },
         "seed_import_result": asdict(artifacts.seed_import_result),
     }
     print(json.dumps(summary, ensure_ascii=False, indent=2))

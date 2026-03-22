@@ -75,6 +75,8 @@ class BootstrapIntegrationTest(unittest.TestCase):
             self.assertIsNotNone(artifacts.ingestion_service)
             self.assertIsNotNone(artifacts.normalization_service)
             self.assertIsNotNone(artifacts.clustering_service)
+            self.assertIsNotNone(artifacts.probability_engine)
+            self.assertIsNotNone(artifacts.api_service)
             self.assertGreater(artifacts.seed_import_result.settlements_imported, 0)
             self.assertGreater(artifacts.seed_import_result.aliases_imported, 0)
 

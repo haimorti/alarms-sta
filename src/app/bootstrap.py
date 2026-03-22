@@ -6,6 +6,7 @@ from pathlib import Path
 
 from src.clustering.matcher import EventMatcher, MatchingPolicy, build_matching_policy
 from src.clustering.service import ClusteringService
+from src.api.service import ApiService
 from src.db.clusters import EventClusterRepository
 from src.config.settings import AppSettings
 from src.db.bootstrap import initialize_database
@@ -13,6 +14,7 @@ from src.db.normalized_events import NormalizedEventRepository
 from src.db.raw_events import RawEventRepository
 from src.db.settlements import SettlementRepository
 from src.geo.registry import SeedImportResult, SettlementRegistryService
+from src.scoring.engine import ProbabilityEngineV1
 from src.ingestion.service import IngestionService
 from src.ingestion.poller import PollerStatus, build_poller_status
 from src.normalization.service import NormalizationService
@@ -33,6 +35,8 @@ class BootstrapArtifacts:
     settlement_registry: SettlementRegistryService
     seed_import_result: SeedImportResult
     clustering_service: ClusteringService
+    probability_engine: ProbabilityEngineV1
+    api_service: ApiService
 
 
 def bootstrap_application(settings: AppSettings) -> BootstrapArtifacts:
@@ -71,6 +75,14 @@ def bootstrap_application(settings: AppSettings) -> BootstrapArtifacts:
         repository=event_cluster_repository,
         matcher=EventMatcher(matching_policy),
     )
+    probability_engine = ProbabilityEngineV1(
+        database_path=settings.database_path,
+        scoring_config=settings.scoring,
+    )
+    api_service = ApiService(
+        database_path=settings.database_path,
+        probability_engine=probability_engine,
+    )
 
     logger.info("Application bootstrap completed. Database initialized at %s", settings.database_path)
     return BootstrapArtifacts(
@@ -83,4 +95,6 @@ def bootstrap_application(settings: AppSettings) -> BootstrapArtifacts:
         settlement_registry=settlement_registry,
         seed_import_result=seed_import_result,
         clustering_service=clustering_service,
+        probability_engine=probability_engine,
+        api_service=api_service,
     )

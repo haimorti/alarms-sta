@@ -35,6 +35,8 @@ class AppSettingsTest(unittest.TestCase):
                 "ALARMS_STA_STRONG_SUBSET": "0.9",
                 "ALARMS_STA_LOW_THRESHOLD": "25",
                 "ALARMS_STA_HIGH_THRESHOLD": "75",
+                "ALARMS_STA_SPATIAL_WEIGHT": "0.7",
+                "ALARMS_STA_HISTORICAL_WEIGHT": "0.3",
                 "ALARMS_STA_DEBUG": "true",
             }
             previous = {key: os.environ.get(key) for key in overrides}
@@ -58,6 +60,8 @@ class AppSettingsTest(unittest.TestCase):
             self.assertEqual(settings.matching.strong_subset_ratio, 0.9)
             self.assertEqual(settings.scoring.low_threshold, 25)
             self.assertEqual(settings.scoring.high_threshold, 75)
+            self.assertEqual(settings.scoring.spatial_weight, 0.7)
+            self.assertEqual(settings.scoring.historical_weight, 0.3)
             self.assertTrue(settings.debug_mode)
 
 

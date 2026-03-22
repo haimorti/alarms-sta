@@ -10,7 +10,8 @@ Stage 1 is now focused on infrastructure:
 - initial SQLite schema,
 - documentation for architecture and MVP scope,
 - tests for configuration and bootstrap,
-- initial ingestion and normalization scaffolding with fixtures.
+- initial ingestion and normalization scaffolding with fixtures,
+- baseline probability engine, internal API service, and minimal HTML views.
 
 A key product rule is now encoded directly into the foundation: the future scoring layer must expose **three separate outputs** instead of one opaque score:
 - spatial probability,
@@ -32,6 +33,7 @@ See:
 - `docs/data-model.md`
 - `docs/event-classification.md`
 - `docs/matching-logic.md`
+- `docs/scoring-model.md`
 - `docs/mvp-scope.md`
 
 ## Run Stage 1 bootstrap

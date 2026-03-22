@@ -21,11 +21,14 @@ Stage 1 establishes a clean, modular foundation for a new probability-assessment
 5. Documentation for data inventory and MVP scope.
 6. Unit and integration tests for configuration and bootstrap.
 
-## Stage 2 to Stage 5 baseline scaffolding now in place
+## Stage 2 to Stage 8 baseline scaffolding now in place
 - **Ingestion scaffolding**: HTTP fetcher, raw payload archiver, duplicate-preserving raw event repository, and ingestion service orchestration.
 - **Normalization scaffolding**: payload parser, keyword-based cautious classifier, persistence into `normalized_events` and `event_locations`, and parse-status updates on raw events.
 - **Settlement registry baseline**: seed import from `coord.csv`, `location_dictionary.csv`, `coord_area.csv`, and `missing_cities.json`, plus canonical-name/alias resolution and unresolved reporting.
 - **Clustering baseline**: deterministic early-warning to actual-alarm matcher using time proximity, overlap ratio, subset ratio, and event-type compatibility.
+- **Probability baseline**: v1 probability engine with separate spatial, historical, and weighted outputs, each with explanations and confidence labels.
+- **Internal API baseline**: query service and HTTP server routes for health, events, settlements, probabilities, and debug data.
+- **Minimal UI baseline**: HTML pages for source status, event summaries, and settlement probability breakdowns.
 - **Fixtures**: example raw payloads under `tests/fixtures/raw/` for deterministic parser, classifier, and ingestion tests.
 
 ## Score model contract from day one

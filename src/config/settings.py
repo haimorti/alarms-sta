@@ -25,6 +25,8 @@ class MatchingConfig:
 class ScoringConfig:
     low_threshold: int = 33
     high_threshold: int = 66
+    spatial_weight: float = 0.6
+    historical_weight: float = 0.4
 
 
 @dataclass(slots=True)
@@ -82,6 +84,8 @@ class AppSettings:
             scoring=ScoringConfig(
                 low_threshold=int(os.environ.get("ALARMS_STA_LOW_THRESHOLD", "33")),
                 high_threshold=int(os.environ.get("ALARMS_STA_HIGH_THRESHOLD", "66")),
+                spatial_weight=float(os.environ.get("ALARMS_STA_SPATIAL_WEIGHT", "0.6")),
+                historical_weight=float(os.environ.get("ALARMS_STA_HISTORICAL_WEIGHT", "0.4")),
             ),
         )
 
