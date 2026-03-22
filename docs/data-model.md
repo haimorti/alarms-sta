@@ -46,3 +46,13 @@ Key fields:
 - `historical_*`: score, label, confidence, explanation for historical transition evidence.
 - `weighted_*`: score, label, confidence, explanation for the final weighted result.
 - `weighting_profile`: serialized description of component weights used.
+
+
+## `risk_windows`
+Stores the time-evolving uncertainty windows for a cluster, such as initial wide launch-detection ellipses and later narrower refined-warning zones.
+
+Key fields:
+- `phase_index`: ordering of the trajectory/risk-estimate evolution.
+- `phase_label`: semantic stage such as initial detection, refined warning zone, or final alert window.
+- `geometry_kind` / `geometry_payload`: serialized representation of the uncertainty area.
+- `trajectory_confidence`: confidence in the current trajectory estimate.

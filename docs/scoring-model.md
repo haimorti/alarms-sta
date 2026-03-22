@@ -19,6 +19,7 @@ Each component carries:
 - centroid centrality
 - edge-distance proxy
 - neighborhood density proxy
+- latest trajectory/risk-window phase context when available
 
 ## Current v1 historical features
 - historical early-warning count for the settlement
@@ -30,7 +31,7 @@ The weighted output uses configurable weights:
 - `spatial_weight`
 - `historical_weight`
 
-The weighted confidence is derived separately and also considers cluster match confidence.
+The weighted confidence is derived separately and also considers cluster match confidence and the latest trajectory-confidence estimate when a dynamic risk window exists.
 
 ## Important limitation
 This is intentionally conservative. When historical data is missing or coordinate coverage is weak, the engine falls back to neutral scores with low confidence rather than pretending to know more than it does.

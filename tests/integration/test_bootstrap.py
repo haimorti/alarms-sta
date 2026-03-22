@@ -48,6 +48,7 @@ class BootstrapIntegrationTest(unittest.TestCase):
                 "event_clusters",
                 "cluster_members",
                 "probability_snapshots",
+                "risk_windows",
             }
             self.assertTrue(expected_tables.issubset(tables))
             self.assertTrue(
@@ -77,6 +78,7 @@ class BootstrapIntegrationTest(unittest.TestCase):
             self.assertIsNotNone(artifacts.clustering_service)
             self.assertIsNotNone(artifacts.probability_engine)
             self.assertIsNotNone(artifacts.api_service)
+            self.assertIsNotNone(artifacts.risk_window_service)
             self.assertGreater(artifacts.seed_import_result.settlements_imported, 0)
             self.assertGreater(artifacts.seed_import_result.aliases_imported, 0)
 

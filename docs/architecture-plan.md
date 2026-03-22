@@ -27,6 +27,7 @@ Stage 1 establishes a clean, modular foundation for a new probability-assessment
 - **Settlement registry baseline**: seed import from `coord.csv`, `location_dictionary.csv`, `coord_area.csv`, and `missing_cities.json`, plus canonical-name/alias resolution and unresolved reporting.
 - **Clustering baseline**: deterministic early-warning to actual-alarm matcher using time proximity, overlap ratio, subset ratio, and event-type compatibility.
 - **Probability baseline**: v1 probability engine with separate spatial, historical, and weighted outputs, each with explanations and confidence labels.
+- **Dynamic risk-window model**: support for sequential uncertainty windows so the system can represent an initial wide launch-detection area that later narrows and shifts as trajectory confidence improves.
 - **Internal API baseline**: query service and HTTP server routes for health, events, settlements, probabilities, and debug data.
 - **Minimal UI baseline**: HTML pages for source status, event summaries, and settlement probability breakdowns.
 - **Fixtures**: example raw payloads under `tests/fixtures/raw/` for deterministic parser, classifier, and ingestion tests.

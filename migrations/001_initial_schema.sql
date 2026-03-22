@@ -121,5 +121,25 @@ CREATE TABLE IF NOT EXISTS probability_snapshots (
     FOREIGN KEY(settlement_id) REFERENCES settlements(id)
 );
 
+CREATE TABLE IF NOT EXISTS risk_windows (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    cluster_id INTEGER NOT NULL,
+    normalized_event_id INTEGER,
+    phase_index INTEGER NOT NULL,
+    phase_label TEXT NOT NULL,
+    window_started_at TEXT NOT NULL,
+    window_ended_at TEXT,
+    geometry_kind TEXT NOT NULL,
+    geometry_payload TEXT NOT NULL,
+    centroid_lat REAL,
+    centroid_lon REAL,
+    area_scale REAL,
+    trajectory_confidence REAL NOT NULL,
+    notes TEXT,
+    created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(cluster_id) REFERENCES event_clusters(id),
+    FOREIGN KEY(normalized_event_id) REFERENCES normalized_events(id)
+);
+
 CREATE INDEX IF NOT EXISTS idx_raw_events_payload_hash
 ON raw_events(payload_hash);

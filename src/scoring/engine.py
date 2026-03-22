@@ -20,6 +20,8 @@ class SettlementEventContext:
     settlement_lon: float | None
     event_locations: list[dict[str, object]]
     cluster_match_confidence: float
+    trajectory_confidence: float = 0.5
+    risk_phase_label: str = "current_estimate"
 
 
 class ProbabilityEngineV1:
@@ -39,7 +41,8 @@ class ProbabilityEngineV1:
             1.0,
             (self.scoring_config.spatial_weight * spatial.confidence_numeric)
             + (self.scoring_config.historical_weight * historical.confidence_numeric)
-            + (0.15 * context.cluster_match_confidence),
+            + (0.10 * context.cluster_match_confidence)
+            + (0.10 * context.trajectory_confidence),
         )
         weighted = ScoreComponent(
             score_numeric=round(weighted_score, 2),
@@ -48,7 +51,7 @@ class ProbabilityEngineV1:
             confidence_label=self._confidence_label(weighted_confidence),
             explanation=(
                 f"Weighted score combines spatial ({self.scoring_config.spatial_weight:.2f}) and historical "
-                f"({self.scoring_config.historical_weight:.2f}) components, adjusted by cluster confidence"
+                f"({self.scoring_config.historical_weight:.2f}) components, adjusted by cluster and trajectory confidence during the '{context.risk_phase_label}' phase"
             ),
         )
         return ProbabilityBreakdown(spatial=spatial, historical=historical, weighted=weighted)
@@ -95,7 +98,7 @@ class ProbabilityEngineV1:
                 score_label=self._score_label(50),
                 confidence_numeric=0.2,
                 confidence_label=self._confidence_label(0.2),
-                explanation="Not enough coordinate coverage to derive a strong spatial estimate",
+                explanation=f"Not enough coordinate coverage to derive a strong spatial estimate during the '{context.risk_phase_label}' phase",
             )
 
         centroid_lat = sum(lat for lat, _ in coords) / len(coords)
@@ -121,7 +124,7 @@ class ProbabilityEngineV1:
             confidence_label=self._confidence_label(confidence),
             explanation=(
                 f"Spatial score is based on centroid centrality, edge distance proxy, and local settlement density "
-                f"within an event of {len(coords)} mapped locations"
+                f"within an event of {len(coords)} mapped locations during the '{context.risk_phase_label}' phase"
             ),
         )
 

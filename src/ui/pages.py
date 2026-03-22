@@ -26,6 +26,7 @@ def render_home_page(health: dict[str, Any], active_events: list[dict[str, Any]]
 def render_settlement_page(payload: dict[str, Any]) -> str:
     settlement = payload.get("settlement", {})
     snapshot = payload.get("snapshot", {})
+    risk_window = payload.get("risk_window", {})
     if not snapshot:
         return f"<html><body><h1>{escape(str(settlement.get('name_he', 'Unknown')))}</h1><p>{escape(str(payload.get('message', 'No probability snapshot available')))}</p></body></html>"
     return f"""
@@ -33,6 +34,7 @@ def render_settlement_page(payload: dict[str, Any]) -> str:
       <h1>{escape(str(settlement.get('name_he')))}</h1>
       <p>Settlement is inside active early warning: yes</p>
       <p>Actual alarm already present: unknown / cluster dependent</p>
+      <p>Current risk phase: {escape(str(risk_window.get('phase_label', 'current_estimate')))}</p>
       <h2>Probability breakdown</h2>
       <ul>
         <li>Spatial probability: {escape(str(snapshot.get('spatial_label')))} ({snapshot.get('spatial_score')})</li>

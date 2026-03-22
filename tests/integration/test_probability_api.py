@@ -11,6 +11,7 @@ from src.app.bootstrap import bootstrap_application
 from src.clustering.matcher import MatchableEvent
 from src.config.settings import AppSettings
 from src.db.raw_events import RawEventInsert, RawEventRepository
+from src.geo.risk_windows import RiskWindowDraft
 
 
 class ProbabilityApiIntegrationTest(unittest.TestCase):
@@ -47,6 +48,40 @@ class ProbabilityApiIntegrationTest(unittest.TestCase):
             ]
             cluster_result = artifacts.clustering_service.cluster_alarm_candidate(early_warning, candidates)
             self.assertIsNotNone(cluster_result.cluster_id)
+            artifacts.risk_window_service.record_window(
+                RiskWindowDraft(
+                    cluster_id=cluster_result.cluster_id,
+                    normalized_event_id=normalize_result.normalized_event_ids[0],
+                    phase_index=1,
+                    phase_label="initial_launch_detection",
+                    window_started_at="2026-03-22T12:00:00+00:00",
+                    window_ended_at="2026-03-22T12:00:05+00:00",
+                    geometry_kind="ellipse",
+                    geometry_payload='{\"major_axis\": 10, \"minor_axis\": 5}',
+                    centroid_lat=32.08,
+                    centroid_lon=34.81,
+                    area_scale=1.0,
+                    trajectory_confidence=0.35,
+                    notes="Wide initial uncertainty window",
+                )
+            )
+            artifacts.risk_window_service.record_window(
+                RiskWindowDraft(
+                    cluster_id=cluster_result.cluster_id,
+                    normalized_event_id=normalize_result.normalized_event_ids[1],
+                    phase_index=2,
+                    phase_label="refined_warning_zone",
+                    window_started_at="2026-03-22T12:00:05+00:00",
+                    window_ended_at=None,
+                    geometry_kind="ellipse",
+                    geometry_payload='{\"major_axis\": 4, \"minor_axis\": 2}',
+                    centroid_lat=32.07,
+                    centroid_lon=34.82,
+                    area_scale=0.4,
+                    trajectory_confidence=0.78,
+                    notes="Refined later-stage estimate",
+                )
+            )
 
             current = artifacts.api_service.probability_current("רמת גן")
             self.assertIsNotNone(current)
@@ -55,6 +90,7 @@ class ProbabilityApiIntegrationTest(unittest.TestCase):
             self.assertIn("historical_score", snapshot)
             self.assertIn("weighted_score", snapshot)
             self.assertEqual(snapshot["historical_label"], "high")
+            self.assertEqual(current["risk_window"]["phase_label"], "refined_warning_zone")
 
             history = artifacts.api_service.probability_history("רמת גן")
             self.assertEqual(len(history["history"]), 1)

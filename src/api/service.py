@@ -57,8 +57,13 @@ class ApiService:
                 "SELECT * FROM event_locations WHERE normalized_event_id = ? ORDER BY location_name_raw",
                 (event_id,),
             ).fetchall()
+            risk_windows = connection.execute(
+                "SELECT * FROM risk_windows WHERE normalized_event_id = ? ORDER BY phase_index DESC, id DESC",
+                (event_id,),
+            ).fetchall()
         payload = dict(event)
         payload["locations"] = [dict(row) for row in locations]
+        payload["risk_windows"] = [dict(row) for row in risk_windows]
         return payload
 
     def settlements_search(self, query: str, limit: int = 20) -> list[dict[str, Any]]:
@@ -91,8 +96,14 @@ class ApiService:
 
         cluster_id = latest_event["id"]
         existing = self.snapshot_repository.latest_for_settlement_and_cluster(settlement["id"], cluster_id)
+        latest_risk_window = self._latest_risk_window(cluster_id)
         if existing:
-            return {"settlement": settlement, "event_id": latest_event["id"], "snapshot": existing}
+            return {
+                "settlement": settlement,
+                "event_id": latest_event["id"],
+                "snapshot": existing,
+                "risk_window": latest_risk_window,
+            }
 
         event_locations = self._event_locations(latest_event["id"])
         context = SettlementEventContext(
@@ -103,6 +114,8 @@ class ApiService:
             settlement_lon=settlement.get("lon"),
             event_locations=event_locations,
             cluster_match_confidence=0.5,
+            trajectory_confidence=float(latest_risk_window["trajectory_confidence"]) if latest_risk_window else 0.5,
+            risk_phase_label=str(latest_risk_window["phase_label"]) if latest_risk_window else "current_estimate",
         )
         snapshot_id = self.probability_engine.evaluate_and_persist(context)
         snapshot = self.snapshot_repository.latest_for_settlement_and_cluster(settlement["id"], cluster_id)
@@ -111,6 +124,7 @@ class ApiService:
             "event_id": latest_event["id"],
             "snapshot_id": snapshot_id,
             "snapshot": snapshot,
+            "risk_window": latest_risk_window,
         }
 
     def probability_history(self, settlement_query: str, limit: int = 20) -> dict[str, Any] | None:
@@ -166,3 +180,17 @@ class ApiService:
                 (event_id,),
             ).fetchall()
         return [dict(row) for row in rows]
+
+    def _latest_risk_window(self, cluster_id: int) -> dict[str, Any] | None:
+        with sqlite3.connect(self.database_path) as connection:
+            connection.row_factory = sqlite3.Row
+            row = connection.execute(
+                """
+                SELECT * FROM risk_windows
+                WHERE cluster_id = ?
+                ORDER BY phase_index DESC, window_started_at DESC, id DESC
+                LIMIT 1
+                """,
+                (cluster_id,),
+            ).fetchone()
+        return dict(row) if row else None

@@ -11,9 +11,11 @@ from src.db.clusters import EventClusterRepository
 from src.config.settings import AppSettings
 from src.db.bootstrap import initialize_database
 from src.db.normalized_events import NormalizedEventRepository
+from src.db.risk_windows import RiskWindowRepository
 from src.db.raw_events import RawEventRepository
 from src.db.settlements import SettlementRepository
 from src.geo.registry import SeedImportResult, SettlementRegistryService
+from src.geo.risk_windows import RiskWindowService
 from src.scoring.engine import ProbabilityEngineV1
 from src.ingestion.service import IngestionService
 from src.ingestion.poller import PollerStatus, build_poller_status
@@ -37,6 +39,7 @@ class BootstrapArtifacts:
     clustering_service: ClusteringService
     probability_engine: ProbabilityEngineV1
     api_service: ApiService
+    risk_window_service: RiskWindowService
 
 
 def bootstrap_application(settings: AppSettings) -> BootstrapArtifacts:
@@ -46,6 +49,7 @@ def bootstrap_application(settings: AppSettings) -> BootstrapArtifacts:
     normalized_event_repository = NormalizedEventRepository(settings.database_path)
     settlement_repository = SettlementRepository(settings.database_path)
     event_cluster_repository = EventClusterRepository(settings.database_path)
+    risk_window_repository = RiskWindowRepository(settings.database_path)
 
     poller_status = build_poller_status(
         configured_url=settings.alerts_url,
@@ -83,6 +87,7 @@ def bootstrap_application(settings: AppSettings) -> BootstrapArtifacts:
         database_path=settings.database_path,
         probability_engine=probability_engine,
     )
+    risk_window_service = RiskWindowService(risk_window_repository)
 
     logger.info("Application bootstrap completed. Database initialized at %s", settings.database_path)
     return BootstrapArtifacts(
@@ -97,4 +102,5 @@ def bootstrap_application(settings: AppSettings) -> BootstrapArtifacts:
         clustering_service=clustering_service,
         probability_engine=probability_engine,
         api_service=api_service,
+        risk_window_service=risk_window_service,
     )
