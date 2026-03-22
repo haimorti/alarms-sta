@@ -6,11 +6,19 @@ SCHEMA_STATEMENTS: tuple[str, ...] = (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         fetched_at TEXT NOT NULL,
         source_payload TEXT NOT NULL,
+        source_url TEXT NOT NULL,
         source_event_id TEXT,
         title TEXT,
         cat TEXT,
         desc TEXT,
-        payload_hash TEXT NOT NULL UNIQUE,
+        payload_hash TEXT NOT NULL,
+        http_status INTEGER,
+        response_latency_ms REAL,
+        archive_path TEXT,
+        parse_status TEXT NOT NULL DEFAULT 'pending',
+        is_duplicate INTEGER NOT NULL DEFAULT 0,
+        duplicate_of_raw_event_id INTEGER,
+        error_message TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
     """,
@@ -123,5 +131,9 @@ SCHEMA_STATEMENTS: tuple[str, ...] = (
         FOREIGN KEY(cluster_id) REFERENCES event_clusters(id),
         FOREIGN KEY(settlement_id) REFERENCES settlements(id)
     )
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_raw_events_payload_hash
+    ON raw_events(payload_hash)
     """,
 )

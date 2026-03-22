@@ -32,6 +32,12 @@ class BootstrapIntegrationTest(unittest.TestCase):
                         "PRAGMA table_info(probability_snapshots)"
                     ).fetchall()
                 }
+                raw_event_columns = {
+                    row[1]
+                    for row in connection.execute(
+                        "PRAGMA table_info(raw_events)"
+                    ).fetchall()
+                }
 
             expected_tables = {
                 "raw_events",
@@ -55,6 +61,19 @@ class BootstrapIntegrationTest(unittest.TestCase):
                     "weighting_profile",
                 }.issubset(probability_columns)
             )
+            self.assertTrue(
+                {
+                    "source_url",
+                    "payload_hash",
+                    "http_status",
+                    "response_latency_ms",
+                    "archive_path",
+                    "is_duplicate",
+                    "duplicate_of_raw_event_id",
+                }.issubset(raw_event_columns)
+            )
+            self.assertIsNotNone(artifacts.ingestion_service)
+            self.assertIsNotNone(artifacts.normalization_service)
 
 
 if __name__ == "__main__":

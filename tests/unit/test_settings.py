@@ -18,6 +18,7 @@ class AppSettingsTest(unittest.TestCase):
             self.assertEqual(settings.normalized_data_dir, Path(tmp_dir).resolve() / "data" / "normalized")
             self.assertEqual(settings.database_path, Path(tmp_dir).resolve() / "data" / "alarms_sta.db")
             self.assertEqual(settings.polling.interval_seconds, 2.0)
+            self.assertTrue(settings.polling.archive_raw_payloads)
             self.assertEqual(settings.matching.max_candidate_window_seconds, 180)
             self.assertFalse(settings.debug_mode)
 
@@ -27,6 +28,8 @@ class AppSettingsTest(unittest.TestCase):
                 "ALARMS_STA_POLL_INTERVAL": "1.5",
                 "ALARMS_STA_REQUEST_TIMEOUT": "9",
                 "ALARMS_STA_MAX_RETRIES": "5",
+                "ALARMS_STA_ARCHIVE_RAW": "0",
+                "ALARMS_STA_USER_AGENT": "test-agent",
                 "ALARMS_STA_MATCH_WINDOW": "240",
                 "ALARMS_STA_MIN_OVERLAP": "0.65",
                 "ALARMS_STA_STRONG_SUBSET": "0.9",
@@ -48,6 +51,8 @@ class AppSettingsTest(unittest.TestCase):
             self.assertEqual(settings.polling.interval_seconds, 1.5)
             self.assertEqual(settings.polling.request_timeout_seconds, 9.0)
             self.assertEqual(settings.polling.max_retries, 5)
+            self.assertFalse(settings.polling.archive_raw_payloads)
+            self.assertEqual(settings.polling.user_agent, "test-agent")
             self.assertEqual(settings.matching.max_candidate_window_seconds, 240)
             self.assertEqual(settings.matching.minimum_overlap_ratio, 0.65)
             self.assertEqual(settings.matching.strong_subset_ratio, 0.9)

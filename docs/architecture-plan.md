@@ -21,6 +21,11 @@ Stage 1 establishes a clean, modular foundation for a new probability-assessment
 5. Documentation for data inventory and MVP scope.
 6. Unit and integration tests for configuration and bootstrap.
 
+## Stage 2 and Stage 3 scaffolding now in place
+- **Ingestion scaffolding**: HTTP fetcher, raw payload archiver, duplicate-preserving raw event repository, and ingestion service orchestration.
+- **Normalization scaffolding**: payload parser, keyword-based cautious classifier, alias resolver backed by `data/missing_cities.json`, and normalization previews.
+- **Fixtures**: example raw payloads under `tests/fixtures/raw/` for deterministic parser, classifier, and ingestion tests.
+
 ## Score model contract from day one
 The product must never collapse all reasoning into one opaque output. The Stage 1 data contract therefore reserves separate fields for:
 - **Spatial score**: relative position inside the early-warning area.

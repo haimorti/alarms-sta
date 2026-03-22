@@ -9,7 +9,8 @@ Stage 1 is now focused on infrastructure:
 - config-driven bootstrap,
 - initial SQLite schema,
 - documentation for architecture and MVP scope,
-- tests for configuration and bootstrap.
+- tests for configuration and bootstrap,
+- initial ingestion and normalization scaffolding with fixtures.
 
 A key product rule is now encoded directly into the foundation: the future scoring layer must expose **three separate outputs** instead of one opaque score:
 - spatial probability,
@@ -28,6 +29,8 @@ The repository already contains historical alarm and geography data under `data/
 See:
 - `docs/architecture-plan.md`
 - `docs/data-inventory.md`
+- `docs/data-model.md`
+- `docs/event-classification.md`
 - `docs/mvp-scope.md`
 
 ## Run Stage 1 bootstrap

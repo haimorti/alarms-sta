@@ -10,6 +10,8 @@ class PollingConfig:
     interval_seconds: float = 2.0
     request_timeout_seconds: float = 5.0
     max_retries: int = 3
+    archive_raw_payloads: bool = True
+    user_agent: str = "alarms-sta/0.1"
 
 
 @dataclass(slots=True)
@@ -69,6 +71,8 @@ class AppSettings:
                 interval_seconds=float(os.environ.get("ALARMS_STA_POLL_INTERVAL", "2")),
                 request_timeout_seconds=float(os.environ.get("ALARMS_STA_REQUEST_TIMEOUT", "5")),
                 max_retries=int(os.environ.get("ALARMS_STA_MAX_RETRIES", "3")),
+                archive_raw_payloads=os.environ.get("ALARMS_STA_ARCHIVE_RAW", "1") in {"1", "true", "TRUE", "yes", "YES"},
+                user_agent=os.environ.get("ALARMS_STA_USER_AGENT", "alarms-sta/0.1"),
             ),
             matching=MatchingConfig(
                 max_candidate_window_seconds=int(os.environ.get("ALARMS_STA_MATCH_WINDOW", "180")),

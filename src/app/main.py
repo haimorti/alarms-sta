@@ -19,6 +19,7 @@ def main() -> None:
         "raw_data_dir": str(artifacts.settings.raw_data_dir),
         "normalized_data_dir": str(artifacts.settings.normalized_data_dir),
         "poller": asdict(artifacts.poller_status),
+        "archive_raw_payloads": artifacts.settings.polling.archive_raw_payloads,
         "matching_policy": asdict(artifacts.matching_policy),
         "scoring_thresholds": asdict(artifacts.scoring_thresholds),
     }

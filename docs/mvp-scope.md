@@ -10,6 +10,7 @@ Provide a cautious, explainable estimate for a selected settlement after it appe
 - Distinguish at least `early_warning` and `actual_alarm` with explicit classification confidence.
 - Resolve settlement names through a registry and alias layer.
 - Match related events into clusters using simple, explainable rules.
+- Preserve duplicate raw observations while still marking them as duplicates.
 - Produce **three visible outputs** for the user:
   - spatial probability,
   - historical probability,

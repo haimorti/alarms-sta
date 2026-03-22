@@ -6,7 +6,9 @@ from dataclasses import dataclass
 from src.clustering.matcher import MatchingPolicy, build_matching_policy
 from src.config.settings import AppSettings
 from src.db.bootstrap import initialize_database
+from src.ingestion.service import IngestionService
 from src.ingestion.poller import PollerStatus, build_poller_status
+from src.normalization.service import NormalizationService
 from src.scoring.model import ScoringThresholds, build_scoring_thresholds
 
 logger = logging.getLogger(__name__)
@@ -18,6 +20,8 @@ class BootstrapArtifacts:
     poller_status: PollerStatus
     matching_policy: MatchingPolicy
     scoring_thresholds: ScoringThresholds
+    ingestion_service: IngestionService
+    normalization_service: NormalizationService
 
 
 def bootstrap_application(settings: AppSettings) -> BootstrapArtifacts:
@@ -37,6 +41,10 @@ def bootstrap_application(settings: AppSettings) -> BootstrapArtifacts:
         low_threshold=settings.scoring.low_threshold,
         high_threshold=settings.scoring.high_threshold,
     )
+    ingestion_service = IngestionService(settings)
+    normalization_service = NormalizationService(
+        alias_file=settings.project_root / "data" / "missing_cities.json",
+    )
 
     logger.info("Application bootstrap completed. Database initialized at %s", settings.database_path)
     return BootstrapArtifacts(
@@ -44,4 +52,6 @@ def bootstrap_application(settings: AppSettings) -> BootstrapArtifacts:
         poller_status=poller_status,
         matching_policy=matching_policy,
         scoring_thresholds=scoring_thresholds,
+        ingestion_service=ingestion_service,
+        normalization_service=normalization_service,
     )

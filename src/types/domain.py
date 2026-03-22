@@ -2,11 +2,15 @@ from __future__ import annotations
 
 from dataclasses import dataclass, field
 from datetime import datetime
-from enum import StrEnum
+from enum import Enum
 from typing import Any
 
 
-class NormalizedEventType(StrEnum):
+class StringEnum(str, Enum):
+    pass
+
+
+class NormalizedEventType(StringEnum):
     UNKNOWN = "unknown"
     EARLY_WARNING = "early_warning"
     ACTUAL_ALARM = "actual_alarm"
@@ -14,13 +18,13 @@ class NormalizedEventType(StrEnum):
     OTHER = "other"
 
 
-class ProbabilityLabel(StrEnum):
+class ProbabilityLabel(StringEnum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
 
 
-class ConfidenceLabel(StrEnum):
+class ConfidenceLabel(StringEnum):
     LOW = "low"
     MEDIUM = "medium"
     HIGH = "high"
