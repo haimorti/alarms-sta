@@ -40,6 +40,8 @@ SCHEMA_STATEMENTS: tuple[str, ...] = (
     CREATE TABLE IF NOT EXISTS settlements (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         name_he TEXT NOT NULL UNIQUE,
+        name_he_normalized TEXT,
+        name_he_compact TEXT,
         name_en TEXT,
         aliases TEXT,
         lat REAL,
@@ -60,6 +62,8 @@ SCHEMA_STATEMENTS: tuple[str, ...] = (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         settlement_id INTEGER,
         alias TEXT NOT NULL UNIQUE,
+        alias_normalized TEXT,
+        alias_compact TEXT,
         alias_type TEXT NOT NULL,
         confidence REAL NOT NULL DEFAULT 1.0,
         notes TEXT,
@@ -160,5 +164,21 @@ SCHEMA_STATEMENTS: tuple[str, ...] = (
     """
     CREATE INDEX IF NOT EXISTS idx_raw_events_payload_hash
     ON raw_events(payload_hash)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_settlements_name_he_normalized
+    ON settlements(name_he_normalized)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_settlements_name_he_compact
+    ON settlements(name_he_compact)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_settlement_aliases_alias_normalized
+    ON settlement_aliases(alias_normalized)
+    """,
+    """
+    CREATE INDEX IF NOT EXISTS idx_settlement_aliases_alias_compact
+    ON settlement_aliases(alias_compact)
     """,
 )

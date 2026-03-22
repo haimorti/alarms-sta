@@ -4,6 +4,8 @@ import sqlite3
 from dataclasses import dataclass
 from pathlib import Path
 
+from src.geo.name_normalizer import compact_location_name, normalize_location_name
+
 
 @dataclass(slots=True)
 class SettlementSeed:
@@ -34,15 +36,15 @@ class SettlementRepository:
 
     def upsert_settlement(self, settlement: SettlementSeed) -> int:
         with sqlite3.connect(self.database_path) as connection:
-            row = connection.execute(
-                "SELECT id FROM settlements WHERE name_he = ?",
-                (settlement.name_he,),
-            ).fetchone()
+            row = connection.execute("SELECT id FROM settlements WHERE name_he = ?", (settlement.name_he,)).fetchone()
+            values = self._settlement_values(settlement)
             if row:
                 connection.execute(
                     """
                     UPDATE settlements
-                    SET name_en = COALESCE(?, name_en),
+                    SET name_he_normalized = ?,
+                        name_he_compact = ?,
+                        name_en = COALESCE(?, name_en),
                         lat = COALESCE(?, lat),
                         lon = COALESCE(?, lon),
                         centroid_lat = COALESCE(?, centroid_lat),
@@ -53,39 +55,20 @@ class SettlementRepository:
                         source_path = COALESCE(?, source_path)
                     WHERE id = ?
                     """,
-                    (
-                        settlement.name_en,
-                        settlement.lat,
-                        settlement.lon,
-                        settlement.centroid_lat,
-                        settlement.centroid_lon,
-                        settlement.polygon,
-                        settlement.geometry,
-                        settlement.source_dataset,
-                        settlement.source_path,
-                        row[0],
-                    ),
+                    values[1:] + (row[0],),
                 )
                 connection.commit()
                 return int(row[0])
 
             cursor = connection.execute(
                 """
-                INSERT INTO settlements (name_he, name_en, lat, lon, centroid_lat, centroid_lon, polygon, geometry, source_dataset, source_path)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO settlements (
+                    name_he, name_he_normalized, name_he_compact, name_en, lat, lon,
+                    centroid_lat, centroid_lon, polygon, geometry, source_dataset, source_path
+                )
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
-                (
-                    settlement.name_he,
-                    settlement.name_en,
-                    settlement.lat,
-                    settlement.lon,
-                    settlement.centroid_lat,
-                    settlement.centroid_lon,
-                    settlement.polygon,
-                    settlement.geometry,
-                    settlement.source_dataset,
-                    settlement.source_path,
-                ),
+                values,
             )
             connection.commit()
             return int(cursor.lastrowid)
@@ -94,39 +77,48 @@ class SettlementRepository:
         with sqlite3.connect(self.database_path) as connection:
             connection.execute(
                 """
-                INSERT INTO settlement_aliases (settlement_id, alias, alias_type, confidence, notes)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO settlement_aliases (settlement_id, alias, alias_normalized, alias_compact, alias_type, confidence, notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(alias) DO UPDATE SET
                     settlement_id = excluded.settlement_id,
+                    alias_normalized = excluded.alias_normalized,
+                    alias_compact = excluded.alias_compact,
                     alias_type = excluded.alias_type,
                     confidence = excluded.confidence,
                     notes = excluded.notes
                 """,
-                (
-                    alias.settlement_id,
-                    alias.alias,
-                    alias.alias_type,
-                    alias.confidence,
-                    alias.notes,
-                ),
+                self._alias_values(alias),
             )
             connection.commit()
 
     def find_by_name_or_alias(self, raw_name: str) -> tuple[int | None, str | None, float, str | None, float | None, float | None]:
+        normalized = normalize_location_name(raw_name)
+        compact = compact_location_name(raw_name)
         with sqlite3.connect(self.database_path) as connection:
             row = connection.execute(
                 """
-                SELECT s.id, s.name_he, 1.0 as confidence, 'exact_name' as method, COALESCE(s.centroid_lat, s.lat), COALESCE(s.centroid_lon, s.lon)
-                FROM settlements s
-                WHERE s.name_he = ?
-                UNION ALL
-                SELECT s.id, s.name_he, sa.confidence, sa.alias_type, COALESCE(s.centroid_lat, s.lat), COALESCE(s.centroid_lon, s.lon)
-                FROM settlement_aliases sa
-                LEFT JOIN settlements s ON s.id = sa.settlement_id
-                WHERE sa.alias = ?
+                SELECT settlement_id, canonical_name, confidence, method, lat, lon
+                FROM (
+                    SELECT s.id AS settlement_id, s.name_he AS canonical_name, 1.0 AS confidence, 'exact_name' AS method,
+                           COALESCE(s.centroid_lat, s.lat) AS lat, COALESCE(s.centroid_lon, s.lon) AS lon
+                    FROM settlements s
+                    WHERE s.name_he = ?
+                    UNION ALL
+                    SELECT s.id, s.name_he, 0.97, 'normalized_name',
+                           COALESCE(s.centroid_lat, s.lat), COALESCE(s.centroid_lon, s.lon)
+                    FROM settlements s
+                    WHERE s.name_he_normalized = ? OR s.name_he_compact = ?
+                    UNION ALL
+                    SELECT s.id, s.name_he, sa.confidence, sa.alias_type,
+                           COALESCE(s.centroid_lat, s.lat), COALESCE(s.centroid_lon, s.lon)
+                    FROM settlement_aliases sa
+                    LEFT JOIN settlements s ON s.id = sa.settlement_id
+                    WHERE sa.alias = ? OR sa.alias_normalized = ? OR sa.alias_compact = ?
+                )
+                ORDER BY confidence DESC, canonical_name
                 LIMIT 1
                 """,
-                (raw_name, raw_name),
+                (raw_name, normalized, compact, raw_name, normalized, compact),
             ).fetchone()
         if not row:
             return (None, None, 0.0, None, None, None)
@@ -137,11 +129,14 @@ class SettlementRepository:
             existing_rows = connection.execute("SELECT id, name_he FROM settlements").fetchall()
             existing_by_name = {name_he: settlement_id for settlement_id, name_he in existing_rows}
             for settlement in settlements:
+                values = self._settlement_values(settlement)
                 if settlement.name_he in existing_by_name:
                     connection.execute(
                         """
                         UPDATE settlements
-                        SET name_en = COALESCE(?, name_en),
+                        SET name_he_normalized = ?,
+                            name_he_compact = ?,
+                            name_en = COALESCE(?, name_en),
                             lat = COALESCE(?, lat),
                             lon = COALESCE(?, lon),
                             centroid_lat = COALESCE(?, centroid_lat),
@@ -152,37 +147,18 @@ class SettlementRepository:
                             source_path = COALESCE(?, source_path)
                         WHERE id = ?
                         """,
-                        (
-                            settlement.name_en,
-                            settlement.lat,
-                            settlement.lon,
-                            settlement.centroid_lat,
-                            settlement.centroid_lon,
-                            settlement.polygon,
-                            settlement.geometry,
-                            settlement.source_dataset,
-                            settlement.source_path,
-                            existing_by_name[settlement.name_he],
-                        ),
+                        values[1:] + (existing_by_name[settlement.name_he],),
                     )
                 else:
                     cursor = connection.execute(
                         """
-                        INSERT INTO settlements (name_he, name_en, lat, lon, centroid_lat, centroid_lon, polygon, geometry, source_dataset, source_path)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        INSERT INTO settlements (
+                            name_he, name_he_normalized, name_he_compact, name_en, lat, lon,
+                            centroid_lat, centroid_lon, polygon, geometry, source_dataset, source_path
+                        )
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
-                        (
-                            settlement.name_he,
-                            settlement.name_en,
-                            settlement.lat,
-                            settlement.lon,
-                            settlement.centroid_lat,
-                            settlement.centroid_lon,
-                            settlement.polygon,
-                            settlement.geometry,
-                            settlement.source_dataset,
-                            settlement.source_path,
-                        ),
+                        values,
                     )
                     existing_by_name[settlement.name_he] = int(cursor.lastrowid)
             rows = connection.execute("SELECT id, name_he FROM settlements").fetchall()
@@ -193,23 +169,58 @@ class SettlementRepository:
         with sqlite3.connect(self.database_path) as connection:
             connection.executemany(
                 """
-                INSERT INTO settlement_aliases (settlement_id, alias, alias_type, confidence, notes)
-                VALUES (?, ?, ?, ?, ?)
+                INSERT INTO settlement_aliases (settlement_id, alias, alias_normalized, alias_compact, alias_type, confidence, notes)
+                VALUES (?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(alias) DO UPDATE SET
                     settlement_id = excluded.settlement_id,
+                    alias_normalized = excluded.alias_normalized,
+                    alias_compact = excluded.alias_compact,
                     alias_type = excluded.alias_type,
                     confidence = excluded.confidence,
                     notes = excluded.notes
                 """,
-                [
-                    (
-                        alias.settlement_id,
-                        alias.alias,
-                        alias.alias_type,
-                        alias.confidence,
-                        alias.notes,
-                    )
-                    for alias in aliases
-                ],
+                [self._alias_values(alias) for alias in aliases],
             )
             connection.commit()
+
+    def geometry_coverage(self, settlement_id: int) -> tuple[bool, bool]:
+        with sqlite3.connect(self.database_path) as connection:
+            row = connection.execute(
+                "SELECT polygon, geometry, source_dataset FROM settlements WHERE id = ?",
+                (settlement_id,),
+            ).fetchone()
+        if not row:
+            return (False, False)
+        polygon, geometry, source_dataset = row
+        has_direct_polygon = bool(polygon) and source_dataset != 'coord.csv'
+        fallback_geometry_used = bool(geometry) and not has_direct_polygon
+        return (has_direct_polygon, fallback_geometry_used)
+
+    @staticmethod
+    def _settlement_values(settlement: SettlementSeed) -> tuple[object, ...]:
+        return (
+            settlement.name_he,
+            normalize_location_name(settlement.name_he),
+            compact_location_name(settlement.name_he),
+            settlement.name_en,
+            settlement.lat,
+            settlement.lon,
+            settlement.centroid_lat,
+            settlement.centroid_lon,
+            settlement.polygon,
+            settlement.geometry,
+            settlement.source_dataset,
+            settlement.source_path,
+        )
+
+    @staticmethod
+    def _alias_values(alias: SettlementAliasSeed) -> tuple[object, ...]:
+        return (
+            alias.settlement_id,
+            alias.alias,
+            normalize_location_name(alias.alias),
+            compact_location_name(alias.alias),
+            alias.alias_type,
+            alias.confidence,
+            alias.notes,
+        )

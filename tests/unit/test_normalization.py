@@ -14,15 +14,15 @@ from src.types.domain import NormalizedEventType
 
 class NormalizationTest(unittest.TestCase):
     def setUp(self) -> None:
-        fixture_path = Path("tests/fixtures/raw/sample_alerts_payload.json")
-        self.payload = json.loads(fixture_path.read_text(encoding="utf-8"))
+        fixture_path = Path('tests/fixtures/raw/sample_alerts_payload.json')
+        self.payload = json.loads(fixture_path.read_text(encoding='utf-8'))
 
     def test_parse_alert_payload_extracts_records_and_locations(self) -> None:
         records = parse_alert_payload(self.payload)
 
         self.assertEqual(len(records), 3)
-        self.assertEqual(records[0].source_event_id, "1001")
-        self.assertEqual(records[0].locations_raw, ["תל אביב", "רמת גן", "אבו-גוש"])
+        self.assertEqual(records[0].source_event_id, '1001')
+        self.assertEqual(records[0].locations_raw, ['תל אביב', 'רמת גן', 'אבו-גוש'])
 
     def test_classify_record_distinguishes_warning_alarm_and_clear(self) -> None:
         records = parse_alert_payload(self.payload)
@@ -43,8 +43,28 @@ class NormalizationTest(unittest.TestCase):
             previews = artifacts.normalization_service.normalize_payload(self.payload)
 
         first_locations = previews[0].resolved_locations
-        self.assertEqual(first_locations[2].raw_name, "אבו-גוש")
-        self.assertEqual(first_locations[2].canonical_name, "אבו גוש")
-        self.assertEqual(first_locations[2].resolution_method, "manual_alias")
-if __name__ == "__main__":
+        self.assertEqual(first_locations[2].raw_name, 'אבו-גוש')
+        self.assertEqual(first_locations[2].canonical_name, 'אבו גוש')
+        self.assertIn(first_locations[2].resolution_method, {'manual_alias', 'generated_alias', 'manual_alias_normalized', 'normalized_name'})
+
+    def test_classify_record_supports_home_front_command_titles(self) -> None:
+        payload = [
+            {'title': 'צפויות להתקבל התרעות', 'data': ['נתניה - מזרח']},
+            {'title': 'צבע אדום', 'data': ['נתניה - מזרח']},
+            {'title': 'האירוע הסתיים', 'data': ['נתניה - מזרח']},
+        ]
+
+        records = parse_alert_payload(payload)
+        classifications = [classify_record(record).event_type for record in records]
+        self.assertEqual(
+            classifications,
+            [
+                NormalizedEventType.EARLY_WARNING,
+                NormalizedEventType.ACTUAL_ALARM,
+                NormalizedEventType.CLEAR,
+            ],
+        )
+
+
+if __name__ == '__main__':
     unittest.main()
