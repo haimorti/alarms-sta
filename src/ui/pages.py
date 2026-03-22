@@ -1,5 +1,7 @@
 from __future__ import annotations
 
+import json
+
 from html import escape
 from typing import Any
 
@@ -10,19 +12,23 @@ def _status_badge(status: dict[str, Any]) -> str:
     return f'<div class="status-pill status-{state}">{title}</div>'
 
 
-def render_home_page(health: dict[str, Any], active_events: list[dict[str, Any]]) -> str:
-    has_active = bool(active_events)
-    timeline = "".join(
+def _timeline_items(active_events: list[dict[str, Any]]) -> str:
+    return "".join(
         f"<li><span>{escape(str(event['normalized_type']))}</span><strong>#{event['id']}</strong><time>{escape(str(event['started_at']))}</time></li>"
         for event in active_events[:6]
     ) or '<li class="empty-row">אין כרגע אירועים פעילים במאגר.</li>'
+
+
+def render_home_page(health: dict[str, Any], active_events: list[dict[str, Any]]) -> str:
+    has_active = bool(active_events)
+    timeline = _timeline_items(active_events)
     app_state = {"state": "warning", "title": "יש התרעה פעילה כלשהי"} if has_active else {"state": "quiet", "title": "אין התרעה פעילה כרגע"}
+    initial_payload = json.dumps({"health": health, "active_events": active_events}, ensure_ascii=False)
     return f"""
     <html lang="he" dir="rtl">
     <head>
       <meta charset="utf-8" />
       <meta name="viewport" content="width=device-width, initial-scale=1" />
-      <meta http-equiv="refresh" content="3" />
       <title>Alarms STA</title>
       <style>
         :root {{ color-scheme: light; --card:#fffdf9; --ink:#1f2937; --muted:#6b7280; --line:#e8ded0; --brand:#185adb; --brand-soft:#e8f0ff; --warn:#b45309; --warn-soft:#fff3df; --alarm:#b42318; --alarm-soft:#feeceb; --ok:#166534; --ok-soft:#eaf8ee; }}
@@ -31,6 +37,7 @@ def render_home_page(health: dict[str, Any], active_events: list[dict[str, Any]]
         .card {{ background:var(--card); border:1px solid var(--line); border-radius:24px; padding:24px; box-shadow:0 10px 30px rgba(15,23,42,.05); }}
         h1 {{ margin:0 0 12px; font-size:40px; line-height:1.1; }} h2 {{ margin:0 0 14px; font-size:22px; }} p {{ margin:0; line-height:1.7; color:var(--muted); }}
         .status-pill {{ display:inline-flex; align-items:center; border-radius:999px; padding:10px 14px; font-size:14px; font-weight:700; margin-bottom:16px; }} .status-warning {{ background:var(--warn-soft); color:var(--warn); }} .status-quiet,.status-ended {{ background:var(--ok-soft); color:var(--ok); }} .status-alarm {{ background:var(--alarm-soft); color:var(--alarm); }}
+        .update-clock {{ display:flex; align-items:center; gap:8px; margin-bottom:14px; color:var(--muted); font-size:14px; }} .update-clock strong {{ color:var(--ink); font-size:16px; }}
         .hero-grid {{ display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-top:20px; }} .metric {{ padding:16px; border-radius:18px; background:#faf7f2; border:1px solid var(--line); }} .metric strong {{ display:block; font-size:26px; margin-top:6px; }}
         .search {{ display:flex; flex-direction:column; gap:12px; }} input {{ width:100%; padding:14px 16px; font-size:16px; border-radius:16px; border:1px solid var(--line); background:white; }}
         .hint {{ font-size:13px; color:var(--muted); }} .actions a {{ display:inline-flex; margin-top:8px; color:var(--brand); text-decoration:none; font-weight:700; }}
@@ -43,12 +50,13 @@ def render_home_page(health: dict[str, Any], active_events: list[dict[str, Any]]
         <section class="hero">
           <div class="card">
             {_status_badge(app_state)}
+            <div class="update-clock">🕒 <span>שעת עדכון אחרונה</span><strong id="last-updated-clock">{escape(str(health.get('last_fetch_at') or '—'))}</strong></div>
             <h1>מערכת התרעות עם הסתברות יישובית.</h1>
             <p>המסך מתעדכן אוטומטית כל 3 שניות. המשתמש מקבל תמונת מצב ברורה: שקט, התראה מוקדמת, אזעקה בפועל או סיום אירוע.</p>
             <div class="hero-grid">
-              <div class="metric"><span>Raw events</span><strong>{escape(str(health.get('raw_events', 0)))}</strong></div>
-              <div class="metric"><span>Normalized events</span><strong>{escape(str(health.get('normalized_events', 0)))}</strong></div>
-              <div class="metric"><span>Last fetch</span><strong style="font-size:18px">{escape(str(health.get('last_fetch_at') or '—'))}</strong></div>
+              <div class="metric"><span>Raw events</span><strong id="raw-events-count">{escape(str(health.get('raw_events', 0)))}</strong></div>
+              <div class="metric"><span>Normalized events</span><strong id="normalized-events-count">{escape(str(health.get('normalized_events', 0)))}</strong></div>
+              <div class="metric"><span>Last fetch</span><strong id="last-fetch-metric" style="font-size:18px">{escape(str(health.get('last_fetch_at') or '—'))}</strong></div>
             </div>
           </div>
           <div class="card search">
@@ -63,7 +71,7 @@ def render_home_page(health: dict[str, Any], active_events: list[dict[str, Any]]
         <section class="grid">
           <div class="card">
             <h2>אירועים אחרונים</h2>
-            <ul>{timeline}</ul>
+            <ul id="active-events-timeline">{timeline}</ul>
           </div>
           <div class="card">
             <h2>מה המשתמש יראה</h2>
@@ -77,6 +85,7 @@ def render_home_page(health: dict[str, Any], active_events: list[dict[str, Any]]
         </section>
       </main>
       <script>
+        const initialPayload = {initial_payload};
         const input = document.getElementById('settlement-search');
         const recentsRoot = document.getElementById('recent-settlements');
         const storageKey = 'alarms-sta-recent-settlements';
@@ -93,8 +102,49 @@ def render_home_page(health: dict[str, Any], active_events: list[dict[str, Any]]
           recentsRoot.innerHTML = recents.map(item => `<button class="chip" type="button">${{item}}</button>`).join('');
           recentsRoot.querySelectorAll('button').forEach((button) => button.addEventListener('click', () => openSettlement(button.textContent || '')));
         }};
+        const statusRoot = document.querySelector('.hero .card');
+        const rawEventsCount = document.getElementById('raw-events-count');
+        const normalizedEventsCount = document.getElementById('normalized-events-count');
+        const lastFetchMetric = document.getElementById('last-fetch-metric');
+        const lastUpdatedClock = document.getElementById('last-updated-clock');
+        const timelineRoot = document.getElementById('active-events-timeline');
+        const renderStatusBadge = (hasActive) => {{
+          const title = hasActive ? 'יש התרעה פעילה כלשהי' : 'אין התרעה פעילה כרגע';
+          const stateClass = hasActive ? 'status-warning' : 'status-quiet';
+          const badge = statusRoot.querySelector('.status-pill');
+          badge.className = `status-pill ${{stateClass}}`;
+          badge.textContent = title;
+        }};
+        const renderTimeline = (events) => {{
+          timelineRoot.innerHTML = events.length
+            ? events.slice(0, 6).map((event) => `<li><span>${{event.normalized_type}}</span><strong>#${{event.id}}</strong><time>${{event.started_at}}</time></li>`).join('')
+            : '<li class="empty-row">אין כרגע אירועים פעילים במאגר.</li>';
+        }};
+        const applyHomePayload = (payload) => {{
+          const health = payload.health || {{}};
+          const events = payload.active_events || [];
+          rawEventsCount.textContent = String(health.raw_events ?? '0');
+          normalizedEventsCount.textContent = String(health.normalized_events ?? '0');
+          const lastFetch = health.last_fetch_at || '—';
+          lastFetchMetric.textContent = lastFetch;
+          lastUpdatedClock.textContent = lastFetch;
+          renderStatusBadge(events.length > 0);
+          renderTimeline(events);
+        }};
+        const pollHomePage = async () => {{
+          try {{
+            const [healthResponse, activeEventsResponse] = await Promise.all([fetch('/health'), fetch('/events/active')]);
+            if (!healthResponse.ok || !activeEventsResponse.ok) return;
+            const [health, activeEvents] = await Promise.all([healthResponse.json(), activeEventsResponse.json()]);
+            applyHomePayload({{ health, active_events: activeEvents }});
+          }} catch (error) {{
+            console.warn('Failed to refresh home page', error);
+          }}
+        }};
         input.addEventListener('keydown', (event) => {{ if (event.key === 'Enter') openSettlement(input.value); }});
+        applyHomePayload(initialPayload);
         renderRecents();
+        window.setInterval(pollHomePage, 3000);
       </script>
     </body></html>
     """
