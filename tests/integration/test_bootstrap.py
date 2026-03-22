@@ -29,49 +29,58 @@ class BootstrapIntegrationTest(unittest.TestCase):
                 probability_columns = {
                     row[1]
                     for row in connection.execute(
-                        "PRAGMA table_info(probability_snapshots)"
+                        'PRAGMA table_info(probability_snapshots)'
                     ).fetchall()
                 }
                 raw_event_columns = {
                     row[1]
                     for row in connection.execute(
-                        "PRAGMA table_info(raw_events)"
+                        'PRAGMA table_info(raw_events)'
+                    ).fetchall()
+                }
+                settlement_columns = {
+                    row[1]
+                    for row in connection.execute(
+                        'PRAGMA table_info(settlements)'
                     ).fetchall()
                 }
 
             expected_tables = {
-                "raw_events",
-                "normalized_events",
-                "settlements",
-                "settlement_aliases",
-                "event_locations",
-                "event_clusters",
-                "cluster_members",
-                "probability_snapshots",
-                "risk_windows",
+                'raw_events',
+                'normalized_events',
+                'settlements',
+                'settlement_aliases',
+                'event_locations',
+                'event_clusters',
+                'cluster_members',
+                'probability_snapshots',
+                'risk_windows',
             }
             self.assertTrue(expected_tables.issubset(tables))
             self.assertTrue(
                 {
-                    "spatial_score",
-                    "spatial_explanation",
-                    "historical_score",
-                    "historical_explanation",
-                    "weighted_score",
-                    "weighted_explanation",
-                    "weighting_profile",
+                    'spatial_score',
+                    'spatial_explanation',
+                    'historical_score',
+                    'historical_explanation',
+                    'weighted_score',
+                    'weighted_explanation',
+                    'weighting_profile',
                 }.issubset(probability_columns)
             )
             self.assertTrue(
                 {
-                    "source_url",
-                    "payload_hash",
-                    "http_status",
-                    "response_latency_ms",
-                    "archive_path",
-                    "is_duplicate",
-                    "duplicate_of_raw_event_id",
+                    'source_url',
+                    'payload_hash',
+                    'http_status',
+                    'response_latency_ms',
+                    'archive_path',
+                    'is_duplicate',
+                    'duplicate_of_raw_event_id',
                 }.issubset(raw_event_columns)
+            )
+            self.assertTrue(
+                {'centroid_lat', 'centroid_lon', 'polygon', 'source_path'}.issubset(settlement_columns)
             )
             self.assertIsNotNone(artifacts.ingestion_service)
             self.assertIsNotNone(artifacts.normalization_service)
@@ -81,7 +90,12 @@ class BootstrapIntegrationTest(unittest.TestCase):
             self.assertIsNotNone(artifacts.risk_window_service)
             self.assertGreater(artifacts.seed_import_result.settlements_imported, 0)
             self.assertGreater(artifacts.seed_import_result.aliases_imported, 0)
+            self.assertGreater(artifacts.seed_import_result.municipality_geojson_records, 0)
+            self.assertEqual(
+                artifacts.seed_import_result.municipality_geojson_root,
+                'data/israel-municipalities-polygons-master',
+            )
 
 
-if __name__ == "__main__":
+if __name__ == '__main__':
     unittest.main()

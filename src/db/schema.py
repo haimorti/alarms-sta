@@ -44,10 +44,14 @@ SCHEMA_STATEMENTS: tuple[str, ...] = (
         aliases TEXT,
         lat REAL,
         lon REAL,
+        centroid_lat REAL,
+        centroid_lon REAL,
         region TEXT,
         district TEXT,
+        polygon TEXT,
         geometry TEXT,
         source_dataset TEXT,
+        source_path TEXT,
         created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
     )
     """,

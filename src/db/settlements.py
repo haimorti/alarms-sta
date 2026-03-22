@@ -11,8 +11,12 @@ class SettlementSeed:
     name_en: str | None
     lat: float | None
     lon: float | None
+    centroid_lat: float | None
+    centroid_lon: float | None
+    polygon: str | None
     geometry: str | None
     source_dataset: str
+    source_path: str | None = None
 
 
 @dataclass(slots=True)
@@ -41,16 +45,24 @@ class SettlementRepository:
                     SET name_en = COALESCE(?, name_en),
                         lat = COALESCE(?, lat),
                         lon = COALESCE(?, lon),
+                        centroid_lat = COALESCE(?, centroid_lat),
+                        centroid_lon = COALESCE(?, centroid_lon),
+                        polygon = COALESCE(?, polygon),
                         geometry = COALESCE(?, geometry),
-                        source_dataset = ?
+                        source_dataset = ?,
+                        source_path = COALESCE(?, source_path)
                     WHERE id = ?
                     """,
                     (
                         settlement.name_en,
                         settlement.lat,
                         settlement.lon,
+                        settlement.centroid_lat,
+                        settlement.centroid_lon,
+                        settlement.polygon,
                         settlement.geometry,
                         settlement.source_dataset,
+                        settlement.source_path,
                         row[0],
                     ),
                 )
@@ -59,16 +71,20 @@ class SettlementRepository:
 
             cursor = connection.execute(
                 """
-                INSERT INTO settlements (name_he, name_en, lat, lon, geometry, source_dataset)
-                VALUES (?, ?, ?, ?, ?, ?)
+                INSERT INTO settlements (name_he, name_en, lat, lon, centroid_lat, centroid_lon, polygon, geometry, source_dataset, source_path)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 """,
                 (
                     settlement.name_he,
                     settlement.name_en,
                     settlement.lat,
                     settlement.lon,
+                    settlement.centroid_lat,
+                    settlement.centroid_lon,
+                    settlement.polygon,
                     settlement.geometry,
                     settlement.source_dataset,
+                    settlement.source_path,
                 ),
             )
             connection.commit()
@@ -100,11 +116,11 @@ class SettlementRepository:
         with sqlite3.connect(self.database_path) as connection:
             row = connection.execute(
                 """
-                SELECT s.id, s.name_he, 1.0 as confidence, 'exact_name' as method, s.lat, s.lon
+                SELECT s.id, s.name_he, 1.0 as confidence, 'exact_name' as method, COALESCE(s.centroid_lat, s.lat), COALESCE(s.centroid_lon, s.lon)
                 FROM settlements s
                 WHERE s.name_he = ?
                 UNION ALL
-                SELECT s.id, s.name_he, sa.confidence, sa.alias_type, s.lat, s.lon
+                SELECT s.id, s.name_he, sa.confidence, sa.alias_type, COALESCE(s.centroid_lat, s.lat), COALESCE(s.centroid_lon, s.lon)
                 FROM settlement_aliases sa
                 LEFT JOIN settlements s ON s.id = sa.settlement_id
                 WHERE sa.alias = ?
@@ -128,32 +144,44 @@ class SettlementRepository:
                         SET name_en = COALESCE(?, name_en),
                             lat = COALESCE(?, lat),
                             lon = COALESCE(?, lon),
+                            centroid_lat = COALESCE(?, centroid_lat),
+                            centroid_lon = COALESCE(?, centroid_lon),
+                            polygon = COALESCE(?, polygon),
                             geometry = COALESCE(?, geometry),
-                            source_dataset = ?
+                            source_dataset = ?,
+                            source_path = COALESCE(?, source_path)
                         WHERE id = ?
                         """,
                         (
                             settlement.name_en,
                             settlement.lat,
                             settlement.lon,
+                            settlement.centroid_lat,
+                            settlement.centroid_lon,
+                            settlement.polygon,
                             settlement.geometry,
                             settlement.source_dataset,
+                            settlement.source_path,
                             existing_by_name[settlement.name_he],
                         ),
                     )
                 else:
                     cursor = connection.execute(
                         """
-                        INSERT INTO settlements (name_he, name_en, lat, lon, geometry, source_dataset)
-                        VALUES (?, ?, ?, ?, ?, ?)
+                        INSERT INTO settlements (name_he, name_en, lat, lon, centroid_lat, centroid_lon, polygon, geometry, source_dataset, source_path)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         """,
                         (
                             settlement.name_he,
                             settlement.name_en,
                             settlement.lat,
                             settlement.lon,
+                            settlement.centroid_lat,
+                            settlement.centroid_lon,
+                            settlement.polygon,
                             settlement.geometry,
                             settlement.source_dataset,
+                            settlement.source_path,
                         ),
                     )
                     existing_by_name[settlement.name_he] = int(cursor.lastrowid)
