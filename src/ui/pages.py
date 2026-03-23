@@ -50,13 +50,13 @@ def render_home_page(health: dict[str, Any], active_events: list[dict[str, Any]]
         <section class="hero">
           <div class="card">
             {_status_badge(app_state)}
-            <div class="update-clock">🕒 <span>שעת עדכון אחרונה</span><strong id="last-updated-clock">{escape(str(health.get('last_fetch_at') or '—'))}</strong></div>
+            <div class="update-clock">🕒 <span>שעת עדכון אחרונה</span><strong id="last-updated-clock">—</strong></div>
             <h1>מערכת התרעות עם הסתברות יישובית.</h1>
             <p>המסך מתעדכן אוטומטית כל 3 שניות. המשתמש מקבל תמונת מצב ברורה: שקט, התראה מוקדמת, אזעקה בפועל או סיום אירוע.</p>
             <div class="hero-grid">
               <div class="metric"><span>Raw events</span><strong id="raw-events-count">{escape(str(health.get('raw_events', 0)))}</strong></div>
               <div class="metric"><span>Normalized events</span><strong id="normalized-events-count">{escape(str(health.get('normalized_events', 0)))}</strong></div>
-              <div class="metric"><span>Last fetch</span><strong id="last-fetch-metric" style="font-size:18px">{escape(str(health.get('last_fetch_at') or '—'))}</strong></div>
+              <div class="metric"><span>Last fetch</span><strong id="last-fetch-metric" style="font-size:18px">{escape(str(health.get('last_fetch_at') or 'טרם התקבל'))}</strong></div>
             </div>
           </div>
           <div class="card search">
@@ -91,6 +91,7 @@ def render_home_page(health: dict[str, Any], active_events: list[dict[str, Any]]
         const storageKey = 'alarms-sta-recent-settlements';
         const readRecents = () => {{ try {{ return JSON.parse(localStorage.getItem(storageKey) || '[]'); }} catch (error) {{ return []; }} }};
         const writeRecents = (value) => localStorage.setItem(storageKey, JSON.stringify(value.slice(0, 6)));
+        const formatClock = (value) => new Date(value).toLocaleTimeString('he-IL', {{ hour: '2-digit', minute: '2-digit', second: '2-digit' }});
         const openSettlement = (value) => {{
           if (!value.trim()) return;
           const recents = [value.trim(), ...readRecents().filter(item => item !== value.trim())];
@@ -120,16 +121,18 @@ def render_home_page(health: dict[str, Any], active_events: list[dict[str, Any]]
             ? events.slice(0, 6).map((event) => `<li><span>${{event.normalized_type}}</span><strong>#${{event.id}}</strong><time>${{event.started_at}}</time></li>`).join('')
             : '<li class="empty-row">אין כרגע אירועים פעילים במאגר.</li>';
         }};
+        const markRefreshTime = (value = new Date().toISOString()) => {{
+          lastUpdatedClock.textContent = formatClock(value);
+        }};
         const applyHomePayload = (payload) => {{
           const health = payload.health || {{}};
           const events = payload.active_events || [];
           rawEventsCount.textContent = String(health.raw_events ?? '0');
           normalizedEventsCount.textContent = String(health.normalized_events ?? '0');
-          const lastFetch = health.last_fetch_at || '—';
-          lastFetchMetric.textContent = lastFetch;
-          lastUpdatedClock.textContent = lastFetch;
+          lastFetchMetric.textContent = health.last_fetch_at || 'טרם התקבל';
           renderStatusBadge(events.length > 0);
           renderTimeline(events);
+          markRefreshTime();
         }};
         const pollHomePage = async () => {{
           try {{
@@ -148,18 +151,19 @@ def render_home_page(health: dict[str, Any], active_events: list[dict[str, Any]]
       </script>
     </body></html>
     """
-
-
 def render_settlement_page(payload: dict[str, Any]) -> str:
     settlement = payload.get("settlement", {})
     snapshot = payload.get("snapshot", {})
     risk_window = payload.get("risk_window", {}) or {}
     status = payload.get("status", {"state": "quiet", "title": "אין התרעה פעילה כרגע"})
+    refreshed_at = escape(str(payload.get("refreshed_at") or ""))
+    last_fetch_at = escape(str(payload.get("last_fetch_at") or "טרם התקבל"))
     if not snapshot:
         return f"""
         <html lang="he" dir="rtl"><head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/>
-        <style>body{{font-family:Arial,'Noto Sans Hebrew',sans-serif;background:#f6f3ee;color:#1f2937;padding:24px}} .card{{max-width:760px;margin:0 auto;background:#fffdf9;border:1px solid #e8ded0;border-radius:24px;padding:24px}}</style></head>
-        <body><div class="card">{_status_badge(status)}<h1>{escape(str(settlement.get('name_he', 'Unknown')))}</h1><p>{escape(str(payload.get('message', 'No probability snapshot available')))}</p></div></body></html>"""
+        <meta http-equiv="refresh" content="3" />
+        <style>body{{font-family:Arial,'Noto Sans Hebrew',sans-serif;background:#f6f3ee;color:#1f2937;padding:24px}} .card{{max-width:760px;margin:0 auto;background:#fffdf9;border:1px solid #e8ded0;border-radius:24px;padding:24px}} .update-clock{{display:flex;align-items:center;gap:8px;margin-bottom:14px;color:#6b7280;font-size:14px}} .update-clock strong{{color:#1f2937}}</style></head>
+        <body><div class="card">{_status_badge(status)}<div class="update-clock">🕒 <span>שעת עדכון אחרונה</span><strong>{refreshed_at}</strong></div><div class="update-clock"><span>Last fetch</span><strong>{last_fetch_at}</strong></div><h1>{escape(str(settlement.get('name_he', 'Unknown')))}</h1><p>{escape(str(payload.get('message', 'No probability snapshot available')))}</p></div></body></html>"""
 
     def component(title: str, score: Any, label: Any, explanation: Any, confidence: Any, weighted: bool = False) -> str:
         extra_class = ' weighted' if weighted else ''
@@ -170,7 +174,7 @@ def render_settlement_page(payload: dict[str, Any]) -> str:
 
     return f"""
     <html lang="he" dir="rtl">
-    <head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><title>{escape(str(settlement.get('name_he')))}</title>
+    <head><meta charset="utf-8"/><meta name="viewport" content="width=device-width, initial-scale=1"/><meta http-equiv="refresh" content="3" /><title>{escape(str(settlement.get('name_he')))}</title>
     <style>
       :root {{ --card:#fffdf9; --line:#e8ded0; --ink:#1f2937; --muted:#6b7280; --brand:#185adb; }}
       * {{ box-sizing:border-box; }} body {{ margin:0; font-family:Arial,"Noto Sans Hebrew",sans-serif; background:linear-gradient(180deg,#fbf8f3 0%,#f4efe8 100%); color:var(--ink); }}
@@ -179,6 +183,7 @@ def render_settlement_page(payload: dict[str, Any]) -> str:
       .score-grid {{ display:grid; grid-template-columns:repeat(3,1fr); gap:16px; margin-top:20px; }} .score-card {{ border:1px solid var(--line); border-radius:20px; padding:18px; background:#fcfaf7; }} .score-card strong {{ display:block; margin-top:8px; font-size:38px; line-height:1; }} .score-card em {{ display:inline-block; margin-top:10px; color:var(--brand); font-style:normal; font-weight:700; }} .score-card p {{ min-height:78px; }} .score-card small {{ color:var(--muted); }} .score-card.weighted {{ background:linear-gradient(180deg,#edf3ff 0%,#f7fbff 100%); border-color:#cadeff; }}
       .facts {{ display:grid; grid-template-columns:repeat(2,1fr); gap:14px; margin-top:20px; }} .fact {{ padding:16px; border:1px solid var(--line); border-radius:18px; background:#fcfaf7; }} .list {{ display:flex; flex-direction:column; gap:12px; }} .list .fact strong {{ display:block; margin-bottom:8px; }} .back {{ color:var(--brand); text-decoration:none; font-weight:700; }}
       .status-pill {{ display:inline-flex; align-items:center; border-radius:999px; padding:10px 14px; font-size:14px; font-weight:700; margin-bottom:16px; }} .status-warning {{ background:#fff3df; color:#b45309; }} .status-quiet,.status-ended {{ background:#eaf8ee; color:#166534; }} .status-alarm {{ background:#feeceb; color:#b42318; }}
+      .update-clock {{ display:flex; align-items:center; gap:8px; margin-bottom:12px; color:var(--muted); font-size:14px; }} .update-clock strong {{ color:var(--ink); font-size:16px; }}
       @media (max-width: 860px) {{ .hero,.score-grid,.facts {{ grid-template-columns:1fr; }} h1 {{ font-size:32px; }} }}
     </style></head>
     <body><main class="shell">
@@ -186,8 +191,10 @@ def render_settlement_page(payload: dict[str, Any]) -> str:
       <section class="hero">
         <div class="card">
           {_status_badge(status)}
+          <div class="update-clock">🕒 <span>שעת עדכון אחרונה</span><strong>{refreshed_at}</strong></div>
+          <div class="update-clock"><span>Last fetch</span><strong>{last_fetch_at}</strong></div>
           <h1>{escape(str(settlement.get('name_he')))}</h1>
-          <p>התצוגה מפרידה בין spatial score, historical score ו-weighted score כדי שהמשתמש יבין גם את הסיבה וגם את רמת הביטחון.</p>
+          <p>העמוד מתרענן אוטומטית כל 3 שניות, ולכן כאשר תופיע התרעה חדשה או יתעדכנו הנתונים של היישוב — התצוגה תתעדכן לבד.</p>
           <div class="facts">
             <div class="fact"><strong>היישוב נכלל כרגע באירוע</strong><span>כן — נמצא בהתראה המוקדמת הפעילה</span></div>
             <div class="fact"><strong>שלב אזור ההתרעה</strong><span>{escape(str(risk_window.get('phase_label', 'current_estimate')))}</span></div>
